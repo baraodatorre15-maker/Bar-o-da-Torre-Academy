@@ -1561,6 +1561,28 @@ export default function App() {
 
   // Views
   const renderView = () => {
+    if (isEnvMissing && view === "login") {
+      return (
+        <>
+          <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white p-3 text-center text-sm font-bold shadow-lg">
+            ⚠️ Configuração do Supabase Ausente! Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nas configurações.
+          </div>
+          <LoginView 
+            appSettings={appSettings}
+            handleLogin={handleLogin}
+            matricula={matricula}
+            setMatricula={setMatricula}
+            password={password}
+            setPassword={setPassword}
+            error={error}
+            loading={loading}
+            onForgotClick={() => setShowForgotModal(true)}
+            onSignUpClick={() => setShowSignUpModal(true)}
+          />
+        </>
+      );
+    }
+
     switch (view) {
       case "login": return (
         <LoginView 
@@ -1647,7 +1669,7 @@ export default function App() {
         </div>
         <div className="flex justify-between items-center relative z-10">
           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-2 shadow-lg">
-            <img src={appSettings.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+            <img src={appSettings?.logo_url || "https://cdn-icons-png.flaticon.com/512/3135/3135810.png"} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
           </div>
           <div className="flex items-center gap-3">
             <button 
@@ -3064,7 +3086,7 @@ export default function App() {
         className="fixed inset-0 bg-[#00a2b1] z-[100] flex flex-col items-center justify-center p-6 text-center"
       >
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-4 shadow-2xl mb-8">
-          <img src={appSettings.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+          <img src={appSettings?.logo_url || "https://cdn-icons-png.flaticon.com/512/3135/3135810.png"} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
         </div>
         
         <div className="relative">

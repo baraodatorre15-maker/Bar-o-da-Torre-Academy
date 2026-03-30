@@ -9,6 +9,10 @@ import { generateTuitionPayments, generateRandomGrades } from '../storage';
 export const dbService = {
   // Auth
   login: async (matricula: string, pass: string): Promise<User | null> => {
+    if (!supabase) {
+      console.error('Supabase client is not initialized. Cannot perform login.');
+      return null;
+    }
     console.log(`Attempting login for matricula: ${matricula}`);
     const { data, error } = await supabase
       .from('users')
@@ -253,6 +257,16 @@ export const dbService = {
 
   // Settings
   getAppSettings: async (): Promise<AppSettings> => {
+    if (!supabase) {
+      console.warn('Supabase client is not initialized. Returning default settings.');
+      return {
+        logo_url: "https://cdn-icons-png.flaticon.com/512/3135/3135810.png",
+        primary_color: "#1fbba6",
+        secondary_color: "#0066cc",
+        theme: "barao",
+        college_name: "Barão da Torre"
+      };
+    }
     const { data, error } = await supabase
       .from('app_settings')
       .select('*')
@@ -273,6 +287,10 @@ export const dbService = {
   },
 
   updateAppSettings: async (settings: any): Promise<AppSettings> => {
+    if (!supabase) {
+      console.error('Supabase client is not initialized. Cannot update settings.');
+      return settings;
+    }
     // We assume there's only one row in app_settings, or we update the first one
     const { data: currentSettings } = await supabase.from('app_settings').select('id').single();
     
