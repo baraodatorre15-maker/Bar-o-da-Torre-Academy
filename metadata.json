@@ -1,0 +1,9 @@
+{
+  "name": "Barão da Torre - Sistema Acadêmico",
+  "description": "Plataforma completa para gestão acadêmica da Faculdade Barão da Torre.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
