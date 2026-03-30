@@ -1,15 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://uojwhcfytzmuiytcwddk.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_QUeG3lUzrI6bWNwUVpxeXw_sDr9SLVJ';
 
 let supabaseInstance: any = null;
 
+console.log('Initializing Supabase with URL:', supabaseUrl);
 try {
   if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'YOUR_SUPABASE_URL') {
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('Supabase client initialized successfully.');
   } else {
-    console.warn('Supabase URL or Anon Key is missing or invalid. Please check your environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY).');
+    console.warn('Supabase URL or Anon Key is missing or invalid. Using mock client.');
     // Create a proxy that logs errors instead of crashing
     supabaseInstance = {
       from: () => ({
@@ -43,4 +45,5 @@ try {
   console.error('Failed to initialize Supabase client:', error);
 }
 
+export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey && supabaseUrl !== 'YOUR_SUPABASE_URL';
 export const supabase = supabaseInstance;

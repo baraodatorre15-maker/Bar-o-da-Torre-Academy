@@ -57,11 +57,10 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 import { resetDB, COURSES, db as localDB } from "./storage";
-import { supabase } from "./lib/supabase";
+import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { dbService as remoteDB } from "./services/dbService";
 import { User, DashboardData, AppSettings, Grade, Schedule, Announcement, Payment, Activity, Exam, OnlineClass, NewsItem } from "./types";
 
-const isSupabaseConfigured = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY && supabase !== null;
 const db = isSupabaseConfigured ? remoteDB : localDB;
 
 function cn(...inputs: ClassValue[]) {
@@ -88,6 +87,7 @@ interface LoginViewProps {
 }
 
 const LoginView = ({ appSettings, handleLogin, matricula, setMatricula, password, setPassword, error, loading, onForgotClick, onSignUpClick }: LoginViewProps) => {
+  console.log("LoginView rendering...");
   return (
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
       {/* Background Image with Overlay */}
@@ -994,81 +994,141 @@ const parseDate = (dateStr: string | undefined) => {
 };
 
 export default function App() {
-  console.log("App component rendering...");
-  const [user, setUser] = useState<any | null>(null);
-  const [view, setView] = useState<string>("login");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
-  const [appSettings, setAppSettings] = useState<AppSettings | any>({
-    logo_url: "https://cdn-icons-png.flaticon.com/512/3135/3135810.png",
-    primary_color: "#1fbba6",
-    secondary_color: "#0066cc",
-    theme: "barao",
-    college_name: "Barão da Torre"
-  });
-  const [isEnvMissing, setIsEnvMissing] = useState(false);
-  
-  useEffect(() => {
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    if (!url || !key) {
-      setIsEnvMissing(true);
-    }
+  console.log("App component starting to render...");
+  try {
+    const [user, setUser] = useState<any | null>(null);
+    const [view, setView] = useState<string>("login");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [debugInfo, setDebugInfo] = useState<string | null>(null);
+    const [appSettings, setAppSettings] = useState<AppSettings | any>({
+      logo_url: "https://cdn-icons-png.flaticon.com/512/3135/3135810.png",
+      primary_color: "#1fbba6",
+      secondary_color: "#0066cc",
+      theme: "barao",
+      college_name: "Barão da Torre"
+    });
+    const [isEnvMissing, setIsEnvMissing] = useState(false);
+    
+    useEffect(() => {
+      console.log("App useEffect running...");
+      if (!isSupabaseConfigured) {
+        console.warn("Supabase is not configured. Using local storage.");
+        setIsEnvMissing(true);
+      } else {
+        console.log("Supabase is configured. Using remote database.");
+      }
 
-    const loadSettings = async () => {
-      const settings = await db.getAppSettings();
-      if (settings) {
-        // Global override to ensure the name and logo are always updated
-        if (settings.college_name === "Barão de Mauá") {
-          settings.college_name = "Barão da Torre";
+      const loadSettings = async () => {
+        console.log("Loading app settings...");
+        try {
+          const settings = await db.getAppSettings();
+          console.log("App settings loaded:", settings);
+          if (settings) {
+            // Global override to ensure the name and logo are always updated
+            if (settings.college_name === "Barão de Mauá") {
+              settings.college_name = "Barão da Torre";
+            }
+            
+            const oldLogos = [
+              "https://lh3.googleusercontent.com/d/1X_m_v_v_v_v_v_v_v_v_v_v_v_v_v_v_v",
+              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVFYMUkJQx9MhrRDAOkp8HpK8qBnhc7WwLtw&s",
+              "https://picsum.photos/seed/college/200/200",
+              "/icon.png"
+            ];
+            if (oldLogos.includes(settings.logo_url)) {
+              settings.logo_url = "https://cdn-icons-png.flaticon.com/512/3135/3135810.png";
+            }
+            
+            // Force 'barao' theme
+            settings.theme = "barao";
+            
+            setAppSettings(settings);
+          }
+        } catch (err) {
+          console.error("Error loading app settings:", err);
         }
-        
-        const oldLogos = [
-          "https://lh3.googleusercontent.com/d/1X_m_v_v_v_v_v_v_v_v_v_v_v_v_v_v_v",
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVFYMUkJQx9MhrRDAOkp8HpK8qBnhc7WwLtw&s",
-          "https://picsum.photos/seed/college/200/200",
-          "/icon.png"
-        ];
-        if (oldLogos.includes(settings.logo_url)) {
-          settings.logo_url = "https://cdn-icons-png.flaticon.com/512/3135/3135810.png";
+      };
+      loadSettings();
+    }, []);
+    const [showToast, setShowToast] = useState(false);
+    const [isSimulatingLoading, setIsSimulatingLoading] = useState(false);
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [editBirthState, setEditBirthState] = useState("");
+    const [editNationality, setEditNationality] = useState("");
+    const [editGender, setEditGender] = useState("");
+    const [editMaritalStatus, setEditMaritalStatus] = useState("");
+    const [editShortName, setEditShortName] = useState("");
+    const [editPhotoUrl, setEditPhotoUrl] = useState("");
+    const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
+    const [isDashboardLoading, setIsDashboardLoading] = useState(false);
+    const [showForgotModal, setShowForgotModal] = useState(false);
+    const [forgotStep, setForgotStep] = useState<'options' | 'input' | 'result'>('options');
+    const [forgotType, setForgotType] = useState<'password' | 'matricula'>('password');
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [forgotResult, setForgotResult] = useState<any>(null);
+    const [isForgotLoading, setIsForgotLoading] = useState(false);
+
+    const [showSignUpModal, setShowSignUpModal] = useState(false);
+    const [signUpName, setSignUpName] = useState("");
+    const [signUpEmail, setSignUpEmail] = useState("");
+    const [signUpPassword, setSignUpPassword] = useState("");
+    const [signUpCourse, setSignUpCourse] = useState("");
+    const [isSignUpLoading, setIsSignUpLoading] = useState(false);
+    const [signUpSuccessMatricula, setSignUpSuccessMatricula] = useState<string | null>(null);
+
+    const [matricula, setMatricula] = useState("");
+    const [password, setPassword] = useState("");
+
+    console.log("App state initialized. Current view:", view);
+
+    const handleLogin = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      setError("");
+      try {
+        console.log(`Attempting login for ${matricula}`);
+        const loggedUser = await db.login(matricula, password);
+        if (loggedUser) {
+          console.log("Login successful:", loggedUser.name);
+          setUser(loggedUser);
+          setView(loggedUser.role === "admin" ? "admin-dashboard" : "dashboard");
+        } else {
+          console.warn("Login failed: Invalid credentials");
+          setError("Matrícula ou senha incorretos.");
         }
-        
-        // Force 'barao' theme
-        settings.theme = "barao";
-        
-        setAppSettings(settings);
+      } catch (err: any) {
+        console.error("Login error:", err);
+        setError(err.message || "Ocorreu um erro ao fazer login.");
+      } finally {
+        setLoading(false);
       }
     };
-    loadSettings();
-  }, []);
-  const [showToast, setShowToast] = useState(false);
-  const [isSimulatingLoading, setIsSimulatingLoading] = useState(false);
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editBirthState, setEditBirthState] = useState("");
-  const [editNationality, setEditNationality] = useState("");
-  const [editGender, setEditGender] = useState("");
-  const [editMaritalStatus, setEditMaritalStatus] = useState("");
-  const [editShortName, setEditShortName] = useState("");
-  const [editPhotoUrl, setEditPhotoUrl] = useState("");
-  const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
-  const [isDashboardLoading, setIsDashboardLoading] = useState(false);
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotStep, setForgotStep] = useState<'options' | 'input' | 'result'>('options');
-  const [forgotType, setForgotType] = useState<'password' | 'matricula'>('password');
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotResult, setForgotResult] = useState<any>(null);
-  const [isForgotLoading, setIsForgotLoading] = useState(false);
 
-  const [showSignUpModal, setShowSignUpModal] = useState(false);
-  const [signUpName, setSignUpName] = useState("");
-  const [signUpEmail, setSignUpEmail] = useState("");
-  const [signUpPassword, setSignUpPassword] = useState("");
-  const [signUpCourse, setSignUpCourse] = useState("");
-  const [isSignUpLoading, setIsSignUpLoading] = useState(false);
-  const [signUpSuccessMatricula, setSignUpSuccessMatricula] = useState<string | null>(null);
+    const handleLogout = () => {
+      console.log("Logging out...");
+      setUser(null);
+      setView("login");
+      setMatricula("");
+      setPassword("");
+    };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+    const testConnection = async () => {
+      console.log("Testing Supabase connection...");
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.from('users').select('count').single();
+        if (error) throw error;
+        setDebugInfo(`Conexão bem-sucedida!\nTotal de usuários: ${data.count}`);
+      } catch (err: any) {
+        console.error("Connection test failed:", err);
+        setDebugInfo(`Erro na conexão: ${err.message || JSON.stringify(err)}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSignUpLoading(true);
     try {

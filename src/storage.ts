@@ -394,272 +394,277 @@ export const generateRandomGrades = (studentId: number, course: string, semester
 };
 
 export const getDB = () => {
-  const data = localStorage.getItem(DB_KEY);
-  if (!data) {
-    localStorage.setItem(DB_KEY, JSON.stringify(initialData));
-    return initialData;
-  }
-  const parsed = JSON.parse(data);
-  
-  // Aggressive migration to replace all occurrences of the old name in the database
-  let dbString = JSON.stringify(parsed);
-  const replacements = [
-    { old: /Barão de Mauá/gi, new: "Barão da Torre" },
-    { old: /Faculdade Barão de Mauá/gi, new: "Faculdade Barão da Torre" },
-    { old: /Centro Universitário Barão de Mauá/gi, new: "Centro Universitário Barão da Torre" },
-    { old: /baraodemaua\.br/gi, new: "baraodatorre.br" }
-  ];
-  
-  let needsUpdate = false;
-  replacements.forEach(({ old, new: newValue }) => {
-    if (dbString.match(old)) {
-      dbString = dbString.replace(old, newValue);
-      needsUpdate = true;
+  try {
+    const data = localStorage.getItem(DB_KEY);
+    if (!data) {
+      localStorage.setItem(DB_KEY, JSON.stringify(initialData));
+      return initialData;
     }
-  });
-
-  if (needsUpdate) {
-    const updatedParsed = JSON.parse(dbString);
-    saveDB(updatedParsed);
-    return updatedParsed;
-  }
-
-  // Ensure appSettings exists even if DB was created before appSettings was added
-  const oldLogos = [
-    "https://lh3.googleusercontent.com/d/1X_m_v_v_v_v_v_v_v_v_v_v_v_v_v_v_v",
-    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVFYMUkJQx9MhrRDAOkp8HpK8qBnhc7WwLtw&s",
-    "https://picsum.photos/seed/college/200/200",
-    "/icon.png"
-  ];
-  if (!parsed.appSettings || oldLogos.includes(parsed.appSettings.logo_url)) {
-    parsed.appSettings = { 
-      ...(parsed.appSettings || {}), 
-      logo_url: initialData.appSettings.logo_url,
-      primary_color: parsed.appSettings?.primary_color || initialData.appSettings.primary_color,
-      secondary_color: parsed.appSettings?.secondary_color || initialData.appSettings.secondary_color,
-      college_name: parsed.appSettings?.college_name || initialData.appSettings.college_name
-    };
-    saveDB(parsed);
-  }
-
-  // Update announcements and payments to 2026 if they are still using 2024 dates (for demo purposes)
-  const hasOldAnnouncements = parsed.announcements?.some((a: any) => a.date.includes("2024"));
-  const hasOldPayments = parsed.payments?.some((p: any) => p.due_date.includes("2024"));
-  const hasEmptyPayments = !parsed.payments || parsed.payments.length === 0;
-  
-  // Check if any student is missing payments
-  const missingPayments = parsed.users
-    .filter((u: any) => u.role === 'student')
-    .some((u: any) => !parsed.payments?.some((p: any) => Number(p.student_id) === Number(u.id)));
-
-  if (hasOldAnnouncements || hasOldPayments || hasEmptyPayments || missingPayments) {
-    parsed.announcements = initialData.announcements;
-    // Ensure all students have 2026 payments
-    const newPayments = [...(parsed.payments || [])].filter(p => !p.due_date.includes("2024"));
+    const parsed = JSON.parse(data);
     
-    parsed.users.forEach((u: any) => {
-      if (u.role === 'student') {
-        const hasPayments = newPayments.some((p: any) => Number(p.student_id) === Number(u.id));
-        if (!hasPayments) {
-          newPayments.push(...generateTuitionPayments(u.id));
+    // Aggressive migration to replace all occurrences of the old name in the database
+    let dbString = JSON.stringify(parsed);
+    const replacements = [
+      { old: /Barão de Mauá/gi, new: "Barão da Torre" },
+      { old: /Faculdade Barão de Mauá/gi, new: "Faculdade Barão da Torre" },
+      { old: /Centro Universitário Barão de Mauá/gi, new: "Centro Universitário Barão da Torre" },
+      { old: /baraodemaua\.br/gi, new: "baraodatorre.br" }
+    ];
+    
+    let needsUpdate = false;
+    replacements.forEach(({ old, new: newValue }) => {
+      if (dbString.match(old)) {
+        dbString = dbString.replace(old, newValue);
+        needsUpdate = true;
+      }
+    });
+
+    if (needsUpdate) {
+      const updatedParsed = JSON.parse(dbString);
+      saveDB(updatedParsed);
+      return updatedParsed;
+    }
+
+    // Ensure appSettings exists even if DB was created before appSettings was added
+    const oldLogos = [
+      "https://lh3.googleusercontent.com/d/1X_m_v_v_v_v_v_v_v_v_v_v_v_v_v_v_v",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVFYMUkJQx9MhrRDAOkp8HpK8qBnhc7WwLtw&s",
+      "https://picsum.photos/seed/college/200/200",
+      "/icon.png"
+    ];
+    if (!parsed.appSettings || oldLogos.includes(parsed.appSettings.logo_url)) {
+      parsed.appSettings = { 
+        ...(parsed.appSettings || {}), 
+        logo_url: initialData.appSettings.logo_url,
+        primary_color: parsed.appSettings?.primary_color || initialData.appSettings.primary_color,
+        secondary_color: parsed.appSettings?.secondary_color || initialData.appSettings.secondary_color,
+        college_name: parsed.appSettings?.college_name || initialData.appSettings.college_name
+      };
+      saveDB(parsed);
+    }
+
+    // Update announcements and payments to 2026 if they are still using 2024 dates (for demo purposes)
+    const hasOldAnnouncements = parsed.announcements?.some((a: any) => a.date.includes("2024"));
+    const hasOldPayments = parsed.payments?.some((p: any) => p.due_date.includes("2024"));
+    const hasEmptyPayments = !parsed.payments || parsed.payments.length === 0;
+    
+    // Check if any student is missing payments
+    const missingPayments = parsed.users
+      .filter((u: any) => u.role === 'student')
+      .some((u: any) => !parsed.payments?.some((p: any) => Number(p.student_id) === Number(u.id)));
+
+    if (hasOldAnnouncements || hasOldPayments || hasEmptyPayments || missingPayments) {
+      parsed.announcements = initialData.announcements;
+      // Ensure all students have 2026 payments
+      const newPayments = [...(parsed.payments || [])].filter(p => !p.due_date.includes("2024"));
+      
+      parsed.users.forEach((u: any) => {
+        if (u.role === 'student') {
+          const hasPayments = newPayments.some((p: any) => Number(p.student_id) === Number(u.id));
+          if (!hasPayments) {
+            newPayments.push(...generateTuitionPayments(u.id));
+          }
         }
+      });
+      
+      parsed.payments = newPayments;
+      saveDB(parsed);
+    }
+
+    // Migration: Ensure all students have grades
+    const studentsMissingGrades = parsed.users
+      .filter((u: any) => u.role === 'student')
+      .filter((u: any) => {
+        const studentGrades = (parsed.grades || []).filter((g: any) => Number(g.student_id) === Number(u.id));
+        return studentGrades.length === 0;
+      });
+
+    if (studentsMissingGrades.length > 0) {
+      if (!parsed.grades) parsed.grades = [];
+      studentsMissingGrades.forEach((s: any) => {
+        const randomGrades = generateRandomGrades(s.id, s.course, s.semester);
+        parsed.grades.push(...randomGrades);
+      });
+      saveDB(parsed);
+    }
+
+    // Migration: Ensure Mateus Fernandes is in the DB
+    const hasMateus = parsed.users.some((u: any) => u.matricula === "20220919");
+    if (!hasMateus) {
+      const mateus = initialData.users.find(u => u.matricula === "20220919");
+      if (mateus) {
+        parsed.users.push(mateus);
+        // Generate payments for him too
+        parsed.payments.push(...generateTuitionPayments(mateus.id));
+        saveDB(parsed);
+      }
+    }
+
+    // Migration: Ensure Guilherme Queiroz is in the DB
+    const hasGuilherme = parsed.users.some((u: any) => u.matricula === "20221515");
+    if (!hasGuilherme) {
+      const guilherme = initialData.users.find(u => u.matricula === "20221515");
+      if (guilherme) {
+        parsed.users.push(guilherme);
+        // Generate payments for him too
+        parsed.payments.push(...generateTuitionPayments(guilherme.id));
+        saveDB(parsed);
+      }
+    }
+
+    // Migration: Ensure Carlos Henrique Mesquita Seifert is in the DB
+    const hasCarlos = parsed.users.some((u: any) => u.matricula === "20252712");
+    if (!hasCarlos) {
+      const carlos = initialData.users.find(u => u.matricula === "20252712");
+      if (carlos) {
+        parsed.users.push(carlos);
+        // Generate payments for him too
+        parsed.payments.push(...generateTuitionPayments(carlos.id));
+        saveDB(parsed);
+      }
+    }
+
+    // Migration: Update admin password if it's still the old one
+    const adminUser = parsed.users.find((u: any) => u.matricula === "admin" && u.password === "admin123");
+    if (adminUser) {
+      adminUser.password = "1515";
+      saveDB(parsed);
+    }
+
+    // Migration: Update professor names to national names
+    const professorMap: Record<number, string> = {
+      1: "Dr. Marcelo Souza",
+      2: "Prof. Fernando Henrique",
+      3: "Dra. Patrícia Gomes",
+      4: "Dr. Cláudio Ferreira",
+      5: "Dra. Luciana Ribeiro",
+      6: "Prof. Sérgio Ramos",
+      7: "Dra. Camila Rodrigues",
+      8: "Dr. Bruno Alves",
+      9: "Prof. Eduardo Jorge",
+      10: "Dra. Aline Moraes",
+      11: "Prof. João Pereira",
+      12: "Dra. Sandra Helena"
+    };
+
+    let disciplinesChanged = false;
+    parsed.disciplines.forEach((d: any) => {
+      if (professorMap[d.id] && d.professor !== professorMap[d.id]) {
+        d.professor = professorMap[d.id];
+        disciplinesChanged = true;
       }
     });
+    if (disciplinesChanged) saveDB(parsed);
+
+    // Migration: Update payment status and announcement dates based on current month
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    let dataChanged = false;
+
+    parsed.payments.forEach((p: any) => {
+      const [day, month, year] = p.due_date.split("/").map(Number);
+      const newStatus = (year < currentYear || (year === currentYear && month < currentMonth)) ? "Pago" : "Em aberto";
+      if (p.status !== newStatus) {
+        p.status = newStatus;
+        p.pix_code = newStatus === "Pago" ? "" : `00020126360014BR.GOV.BCB.PIX0114+55119999999995204000053039865407679.895802BR5913FACULDADE_EDU6009SAO_PAULO62070503***6304E2B1`;
+        dataChanged = true;
+      }
+    });
+
+    parsed.announcements.forEach((ann: any, index: number) => {
+      const day = (index + 1).toString().padStart(2, '0');
+      const newDate = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${day}`;
+      if (ann.date !== newDate) {
+        ann.date = newDate;
+        dataChanged = true;
+      }
+    });
+
+    if (dataChanged) saveDB(parsed);
+
+    // Migration: Ensure online_classes and exams exist in the DB
+    let structureChanged = false;
     
-    parsed.payments = newPayments;
-    saveDB(parsed);
-  }
-
-  // Migration: Ensure all students have grades
-  const studentsMissingGrades = parsed.users
-    .filter((u: any) => u.role === 'student')
-    .filter((u: any) => {
-      const studentGrades = (parsed.grades || []).filter((g: any) => Number(g.student_id) === Number(u.id));
-      return studentGrades.length === 0;
-    });
-
-  if (studentsMissingGrades.length > 0) {
-    if (!parsed.grades) parsed.grades = [];
-    studentsMissingGrades.forEach((s: any) => {
-      const randomGrades = generateRandomGrades(s.id, s.course, s.semester);
-      parsed.grades.push(...randomGrades);
-    });
-    saveDB(parsed);
-  }
-
-  // Migration: Ensure Mateus Fernandes is in the DB
-  const hasMateus = parsed.users.some((u: any) => u.matricula === "20220919");
-  if (!hasMateus) {
-    const mateus = initialData.users.find(u => u.matricula === "20220919");
-    if (mateus) {
-      parsed.users.push(mateus);
-      // Generate payments for him too
-      parsed.payments.push(...generateTuitionPayments(mateus.id));
-      saveDB(parsed);
-    }
-  }
-
-  // Migration: Ensure Guilherme Queiroz is in the DB
-  const hasGuilherme = parsed.users.some((u: any) => u.matricula === "20221515");
-  if (!hasGuilherme) {
-    const guilherme = initialData.users.find(u => u.matricula === "20221515");
-    if (guilherme) {
-      parsed.users.push(guilherme);
-      // Generate payments for him too
-      parsed.payments.push(...generateTuitionPayments(guilherme.id));
-      saveDB(parsed);
-    }
-  }
-
-  // Migration: Ensure Carlos Henrique Mesquita Seifert is in the DB
-  const hasCarlos = parsed.users.some((u: any) => u.matricula === "20252712");
-  if (!hasCarlos) {
-    const carlos = initialData.users.find(u => u.matricula === "20252712");
-    if (carlos) {
-      parsed.users.push(carlos);
-      // Generate payments for him too
-      parsed.payments.push(...generateTuitionPayments(carlos.id));
-      saveDB(parsed);
-    }
-  }
-
-  // Migration: Update admin password if it's still the old one
-  const adminUser = parsed.users.find((u: any) => u.matricula === "admin" && u.password === "admin123");
-  if (adminUser) {
-    adminUser.password = "1515";
-    saveDB(parsed);
-  }
-
-  // Migration: Update professor names to national names
-  const professorMap: Record<number, string> = {
-    1: "Dr. Marcelo Souza",
-    2: "Prof. Fernando Henrique",
-    3: "Dra. Patrícia Gomes",
-    4: "Dr. Cláudio Ferreira",
-    5: "Dra. Luciana Ribeiro",
-    6: "Prof. Sérgio Ramos",
-    7: "Dra. Camila Rodrigues",
-    8: "Dr. Bruno Alves",
-    9: "Prof. Eduardo Jorge",
-    10: "Dra. Aline Moraes",
-    11: "Prof. João Pereira",
-    12: "Dra. Sandra Helena"
-  };
-
-  let disciplinesChanged = false;
-  parsed.disciplines.forEach((d: any) => {
-    if (professorMap[d.id] && d.professor !== professorMap[d.id]) {
-      d.professor = professorMap[d.id];
-      disciplinesChanged = true;
-    }
-  });
-  if (disciplinesChanged) saveDB(parsed);
-
-  // Migration: Update payment status and announcement dates based on current month
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYear = new Date().getFullYear();
-  let dataChanged = false;
-
-  parsed.payments.forEach((p: any) => {
-    const [day, month, year] = p.due_date.split("/").map(Number);
-    const newStatus = (year < currentYear || (year === currentYear && month < currentMonth)) ? "Pago" : "Em aberto";
-    if (p.status !== newStatus) {
-      p.status = newStatus;
-      p.pix_code = newStatus === "Pago" ? "" : `00020126360014BR.GOV.BCB.PIX0114+55119999999995204000053039865407679.895802BR5913FACULDADE_EDU6009SAO_PAULO62070503***6304E2B1`;
-      dataChanged = true;
-    }
-  });
-
-  parsed.announcements.forEach((ann: any, index: number) => {
-    const day = (index + 1).toString().padStart(2, '0');
-    const newDate = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${day}`;
-    if (ann.date !== newDate) {
-      ann.date = newDate;
-      dataChanged = true;
-    }
-  });
-
-  if (dataChanged) saveDB(parsed);
-
-  // Migration: Ensure online_classes and exams exist in the DB
-  let structureChanged = false;
-  
-  if (!parsed.news || parsed.news.length === 0 || (parsed.news[0] && parsed.news[0].image && parsed.news[0].image.includes("picsum"))) {
-    parsed.news = initialData.news;
-    structureChanged = true;
-  }
-
-  // Migration: Ensure enrollment_proof_urls exists and is populated from enrollment_proof_url
-  parsed.users = parsed.users.map((u: any) => {
-    if (u.role === 'student' && !u.enrollment_proof_urls) {
-      u.enrollment_proof_urls = {};
-      if (u.enrollment_proof_url && u.enrollment_proof_url !== "EMPTY") {
-        // By default, map the existing one to the current primary theme (Barao) or others
-        const themes = ['barao', 'retro', 'uni', 'uniplan', 'modern'];
-        themes.forEach(t => {
-          u.enrollment_proof_urls[t] = u.enrollment_proof_url;
-        });
-      }
+    if (!parsed.news || parsed.news.length === 0 || (parsed.news[0] && parsed.news[0].image && parsed.news[0].image.includes("picsum"))) {
+      parsed.news = initialData.news;
       structureChanged = true;
     }
-    if (u.role === 'student' && !u.email) {
-      u.email = `${u.matricula}@instituicao.br`;
-      structureChanged = true;
-    }
-    return u;
-  });
-  if (!parsed.online_classes || parsed.online_classes.length < initialData.online_classes.length) {
-    parsed.online_classes = initialData.online_classes;
-    structureChanged = true;
-  }
-  
-  if (!parsed.exams || parsed.exams.length < initialData.exams.length) {
-    parsed.exams = initialData.exams;
-    structureChanged = true;
-  }
 
-  // Migration: Ensure disciplines are up to date
-  if (!parsed.disciplines || parsed.disciplines.length < initialData.disciplines.length) {
-    parsed.disciplines = initialData.disciplines;
-    structureChanged = true;
-  }
-
-  // Migration: Ensure all students have validity, regularity, cpf, birth_date and enrollment_date
-  parsed.users.forEach((u: any) => {
-    if (u.role === 'student') {
-      if (!u.validity) u.validity = "12/2026";
-      if (!u.regularity) u.regularity = "Regular";
-      if (!u.cpf) u.cpf = "000.000.000-00";
-      if (!u.birth_date) u.birth_date = "01/01/2000";
-      if (!u.birth_state) u.birth_state = "SP";
-      if (!u.nationality) u.nationality = "Brasileira";
-      if (!u.gender) u.gender = "Masculino";
-      if (!u.marital_status) u.marital_status = "Solteiro";
-      if (!u.short_name) u.short_name = u.name.split(' ')[0];
-      // Force update all to 10/02/2026 as requested
-      if (u.enrollment_date !== "10/02/2026") {
-        u.enrollment_date = "10/02/2026";
+    // Migration: Ensure enrollment_proof_urls exists and is populated from enrollment_proof_url
+    parsed.users = parsed.users.map((u: any) => {
+      if (u.role === 'student' && !u.enrollment_proof_urls) {
+        u.enrollment_proof_urls = {};
+        if (u.enrollment_proof_url && u.enrollment_proof_url !== "EMPTY") {
+          // By default, map the existing one to the current primary theme (Barao) or others
+          const themes = ['barao', 'retro', 'uni', 'uniplan', 'modern'];
+          themes.forEach(t => {
+            u.enrollment_proof_urls[t] = u.enrollment_proof_url;
+          });
+        }
         structureChanged = true;
       }
-      if (!u.status) {
+      if (u.role === 'student' && !u.email) {
+        u.email = `${u.matricula}@instituicao.br`;
+        structureChanged = true;
+      }
+      return u;
+    });
+    if (!parsed.online_classes || parsed.online_classes.length < initialData.online_classes.length) {
+      parsed.online_classes = initialData.online_classes;
+      structureChanged = true;
+    }
+    
+    if (!parsed.exams || parsed.exams.length < initialData.exams.length) {
+      parsed.exams = initialData.exams;
+      structureChanged = true;
+    }
+
+    // Migration: Ensure disciplines are up to date
+    if (!parsed.disciplines || parsed.disciplines.length < initialData.disciplines.length) {
+      parsed.disciplines = initialData.disciplines;
+      structureChanged = true;
+    }
+
+    // Migration: Ensure all students have validity, regularity, cpf, birth_date and enrollment_date
+    parsed.users.forEach((u: any) => {
+      if (u.role === 'student') {
+        if (!u.validity) u.validity = "12/2026";
+        if (!u.regularity) u.regularity = "Regular";
+        if (!u.cpf) u.cpf = "000.000.000-00";
+        if (!u.birth_date) u.birth_date = "01/01/2000";
+        if (!u.birth_state) u.birth_state = "SP";
+        if (!u.nationality) u.nationality = "Brasileira";
+        if (!u.gender) u.gender = "Masculino";
+        if (!u.marital_status) u.marital_status = "Solteiro";
+        if (!u.short_name) u.short_name = u.name.split(' ')[0];
+        // Force update all to 10/02/2026 as requested
+        if (u.enrollment_date !== "10/02/2026") {
+          u.enrollment_date = "10/02/2026";
+          structureChanged = true;
+        }
+        if (!u.status) {
+          u.status = "active";
+          structureChanged = true;
+        }
+      }
+      if (u.role === 'admin' && !u.status) {
         u.status = "active";
         structureChanged = true;
       }
-    }
-    if (u.role === 'admin' && !u.status) {
-      u.status = "active";
-      structureChanged = true;
-    }
-  });
+    });
 
-  // Migration: Ensure appSettings has theme
-  if (!parsed.appSettings.theme || parsed.appSettings.theme === "modern") {
-    parsed.appSettings.theme = "barao";
+    // Migration: Ensure appSettings has theme
+    if (!parsed.appSettings.theme || parsed.appSettings.theme === "modern") {
+      parsed.appSettings.theme = "barao";
+    }
+
+    saveDB(parsed);
+
+    return parsed;
+  } catch (error) {
+    console.error("Error loading local DB:", error);
+    return initialData;
   }
-
-  saveDB(parsed);
-
-  return parsed;
 };
 
 export const saveDB = (data: any) => {
