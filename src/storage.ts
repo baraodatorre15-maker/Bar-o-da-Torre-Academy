@@ -18,7 +18,7 @@ export const initialData = {
     {
       id: 1,
       matricula: "admin",
-      password: "1515",
+      password: "admin",
       name: "Administrador Sistema",
       role: "admin",
       photo_url: "https://picsum.photos/seed/admin/200/200",
@@ -340,7 +340,7 @@ export const generateTuitionPayments = (studentId: number) => {
       amount: 679.89,
       due_date: dueDateStr,
       status: status,
-      pix_code: status === "Pago" ? "" : `00020126360014BR.GOV.BCB.PIX0114+55119999999995204000053039865407679.895802BR5913FACULDADE_EDU6009SAO_PAULO62070503***6304E2B1`
+      pix_code: status === "Pago" ? "" : `00020126360014BR.GOV.BCB.PIX0114+55119999999995204000053039865407679.895802BR5913ACADEMY_EDU6009SAO_PAULO62070503***6304E2B1`
     });
   }
   return payments;
@@ -405,9 +405,11 @@ export const getDB = () => {
     // Aggressive migration to replace all occurrences of the old name in the database
     let dbString = JSON.stringify(parsed);
     const replacements = [
-      { old: /Barão de Mauá/gi, new: "Barão da Torre" },
-      { old: /Faculdade Barão de Mauá/gi, new: "Faculdade Barão da Torre" },
-      { old: /Centro Universitário Barão de Mauá/gi, new: "Centro Universitário Barão da Torre" },
+      { old: /Barão de Mauá/gi, new: "Barão da Torre Academy" },
+      { old: /Faculdade Barão de Mauá/gi, new: "Barão da Torre Academy" },
+      { old: /Centro Universitário Barão de Mauá/gi, new: "Barão da Torre Academy" },
+      { old: /Faculdade Barão da Torre/gi, new: "Barão da Torre Academy" },
+      { old: /Barão da Torre/gi, new: "Barão da Torre Academy" },
       { old: /baraodemaua\.br/gi, new: "baraodatorre.br" }
     ];
     
@@ -566,7 +568,7 @@ export const getDB = () => {
       const newStatus = (year < currentYear || (year === currentYear && month < currentMonth)) ? "Pago" : "Em aberto";
       if (p.status !== newStatus) {
         p.status = newStatus;
-        p.pix_code = newStatus === "Pago" ? "" : `00020126360014BR.GOV.BCB.PIX0114+55119999999995204000053039865407679.895802BR5913FACULDADE_EDU6009SAO_PAULO62070503***6304E2B1`;
+        p.pix_code = newStatus === "Pago" ? "" : `00020126360014BR.GOV.BCB.PIX0114+55119999999995204000053039865407679.895802BR5913ACADEMY_EDU6009SAO_PAULO62070503***6304E2B1`;
         dataChanged = true;
       }
     });
@@ -679,7 +681,10 @@ export const resetDB = () => {
 export const db = {
   login: async (matricula: string, pass: string) => {
     const database = getDB();
-    const user = database.users.find((u: any) => u.matricula === matricula && u.password === pass);
+    const user = database.users.find((u: any) => 
+      u.matricula.toLowerCase() === matricula.toLowerCase() && 
+      u.password === pass
+    );
     
     if (user) {
       if (user.role === 'student' && user.status === 'blocked') {
@@ -935,14 +940,17 @@ export const db = {
     return Promise.resolve();
   },
   signUp: async (signUpData: any) => {
+    console.log("localDB.signUp started", signUpData);
     const database = getDB();
     
     // Check if matricula already exists
     if (database.users.some((u: any) => u.matricula === signUpData.matricula)) {
+      console.warn("Matricula already exists:", signUpData.matricula);
       throw new Error("Esta matrícula já está cadastrada.");
     }
 
     const newId = database.users.length > 0 ? Math.max(...database.users.map((u: any) => u.id)) + 1 : 1;
+    console.log("New student ID:", newId);
     
     const newStudent = { 
       ...signUpData, 
@@ -957,16 +965,35 @@ export const db = {
     };
 
     database.users.push(newStudent);
+    console.log("Saving database with new student...");
     saveDB(database);
+    console.log("Database saved successfully.");
 
     // Generate initial data
-    const studentPayments = generateTuitionPayments(newId);
-    database.payments.push(...studentPayments);
+    console.log("Generating initial data for student...");
+    try {
+      console.log("Generating payments...");
+      const studentPayments = generateTuitionPayments(newId);
+      database.payments.push(...studentPayments);
 
-    const studentGrades = generateRandomGrades(newId, newStudent.course, 1);
-    database.grades.push(...studentGrades);
+      console.log("Generating grades...");
+      const studentGrades = generateRandomGrades(newId, newStudent.course, 1);
+      database.grades.push(...studentGrades);
 
-    saveDB(database);
+      console.log("Saving database with initial data...");
+      saveDB(database);
+      console.log("Database saved with initial data.");
+    } catch (genError) {
+      console.error("Error generating initial data locally:", genError);
+    }
+
+    console.log("localDB.signUp finished successfully");
     return newStudent;
+  },
+
+  bootstrapDatabase: async (initialData: any) => {
+    console.log("Bootstrapping local database with initial data...");
+    localStorage.setItem(DB_KEY, JSON.stringify(initialData));
+    window.location.reload();
   }
 };

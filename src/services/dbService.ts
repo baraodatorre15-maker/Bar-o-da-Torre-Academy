@@ -14,10 +14,11 @@ export const dbService = {
       return null;
     }
     console.log(`Attempting login for matricula: ${matricula}`);
+    // Case-insensitive search for matricula
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('matricula', matricula)
+      .ilike('matricula', matricula)
       .eq('password', pass)
       .single();
 
@@ -280,7 +281,7 @@ export const dbService = {
         primary_color: "#1e3a8a",
         secondary_color: "#3b82f6",
         theme: "barao",
-        college_name: "Faculdade Barão da Torre"
+        college_name: "Barão da Torre"
       };
     }
     return data as AppSettings;
@@ -350,6 +351,7 @@ export const dbService = {
   },
 
   signUp: async (signUpData: any): Promise<User> => {
+    console.log("remoteDB.signUp started", signUpData);
     // Check if matricula already exists
     const { data: existingUser } = await supabase
       .from('users')
@@ -358,6 +360,7 @@ export const dbService = {
       .maybeSingle();
 
     if (existingUser) {
+      console.warn("Matricula already exists in remote DB:", signUpData.matricula);
       throw new Error('Esta matrícula já está cadastrada.');
     }
 
@@ -373,6 +376,7 @@ export const dbService = {
       photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${signUpData.matricula}`
     };
 
+    console.log("Inserting new user into remote DB...", newUser);
     const { data, error } = await supabase
       .from('users')
       .insert([newUser])
@@ -380,21 +384,81 @@ export const dbService = {
       .single();
 
     if (error) {
-      console.error('Sign up error:', error);
+      console.error('Sign up error in remote DB (insert user):', error);
       throw error;
     }
 
+    console.log("User inserted successfully. ID:", data.id, "Generating initial data...");
     // Generate initial data (payments and grades)
     try {
+      console.log("Generating payments...");
       const studentPayments = generateTuitionPayments(data.id).map(({ id, ...rest }) => rest);
-      await supabase.from('payments').insert(studentPayments);
+      const { error: payError } = await supabase.from('payments').insert(studentPayments);
+      if (payError) console.error("Error inserting payments:", payError);
       
+      console.log("Generating grades...");
       const studentGrades = generateRandomGrades(data.id, data.course, 1).map(({ id, ...rest }) => rest);
-      await supabase.from('grades').insert(studentGrades);
+      const { error: gradeError } = await supabase.from('grades').insert(studentGrades);
+      if (gradeError) console.error("Error inserting grades:", gradeError);
+      
+      console.log("Initial data generation step completed");
     } catch (genError) {
-      console.error('Error generating initial data for new student:', genError);
+      console.error('Error in initial data generation block:', genError);
     }
 
+    console.log("remoteDB.signUp finished successfully");
     return data as User;
+  },
+
+  bootstrapDatabase: async (initialData: any) => {
+    if (!supabase) return;
+    console.log("Bootstrapping remote database with initial data...");
+    
+    // Helper to handle upsert errors
+    const upsertTable = async (table: string, data: any[], conflictColumn: string = 'id') => {
+      console.log(`Upserting ${data.length} rows into ${table}...`);
+      const { error } = await supabase.from(table).upsert(data, { onConflict: conflictColumn });
+      if (error) {
+        console.error(`Error bootstrapping ${table}:`, error);
+        throw new Error(`Erro na tabela ${table}: ${error.message}`);
+      }
+      else console.log(`Successfully bootstrapped ${table}`);
+    };
+
+    try {
+      // 1. Users
+      await upsertTable('users', initialData.users.map(({ id, ...rest }: any) => rest), 'matricula');
+
+      // 2. Schedules (from disciplines)
+      if (initialData.disciplines) {
+        await upsertTable('schedules', initialData.disciplines.map(({ id, ...rest }: any) => rest));
+      }
+
+      // 3. Announcements
+      await upsertTable('announcements', initialData.announcements.map(({ id, ...rest }: any) => rest));
+
+      // 4. News
+      await upsertTable('news', initialData.news.map(({ id, ...rest }: any) => rest));
+
+      // 5. Online Classes
+      await upsertTable('online_classes', initialData.online_classes.map(({ id, ...rest }: any) => rest));
+
+      // 6. Exams
+      await upsertTable('exams', initialData.exams.map(({ id, ...rest }: any) => rest));
+
+      // 7. App Settings
+      await upsertTable('app_settings', [{ 
+        id: 1, 
+        college_name: "Barão da Torre Academy",
+        theme: "barao",
+        primary_color: "#1fbba6",
+        secondary_color: "#0066cc"
+      }]);
+
+      console.log("Bootstrap finished successfully.");
+    } catch (err: any) {
+      console.error("Bootstrap failed:", err);
+      throw err;
+    }
   }
 };

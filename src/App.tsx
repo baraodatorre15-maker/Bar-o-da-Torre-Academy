@@ -56,7 +56,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-import { resetDB, COURSES, db as localDB } from "./storage";
+import { resetDB, COURSES, db as localDB, initialData } from "./storage";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { dbService as remoteDB } from "./services/dbService";
 import { User, DashboardData, AppSettings, Grade, Schedule, Announcement, Payment, Activity, Exam, OnlineClass, NewsItem } from "./types";
@@ -68,7 +68,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const getCollegeName = (settings: AppSettings | null) => {
-  const name = settings?.college_name || "Barão da Torre";
+  const name = settings?.college_name || "Barão da Torre Academy";
   if (name === "Barão de Mauá") return "Barão da Torre";
   return name;
 };
@@ -1135,19 +1135,36 @@ const SignUpModal = ({
   onClose, 
   successMatricula, 
   isLoading, 
-  onSubmit,
-  name, setName,
-  email, setEmail,
-  password, setPassword,
-  confirmPassword, setConfirmPassword,
-  birthDate, setBirthDate,
-  cpf, setCPF,
-  address, setAddress,
-  city, setCity,
-  cep, setCEP,
-  course, setCourse
+  onSubmit
 }: any) => {
+  const [localName, setLocalName] = useState("");
+  const [localEmail, setLocalEmail] = useState("");
+  const [localPassword, setLocalPassword] = useState("");
+  const [localConfirmPassword, setLocalConfirmPassword] = useState("");
+  const [localBirthDate, setLocalBirthDate] = useState("");
+  const [localCPF, setLocalCPF] = useState("");
+  const [localAddress, setLocalAddress] = useState("");
+  const [localCity, setLocalCity] = useState("");
+  const [localCEP, setLocalCEP] = useState("");
+  const [localCourse, setLocalCourse] = useState("");
+
   if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      name: localName,
+      email: localEmail,
+      password: localPassword,
+      confirmPassword: localConfirmPassword,
+      birthDate: localBirthDate,
+      cpf: localCPF,
+      address: localAddress,
+      city: localCity,
+      cep: localCEP,
+      course: localCourse
+    });
+  };
 
   return (
     <motion.div 
@@ -1203,7 +1220,7 @@ const SignUpModal = ({
               </button>
             </div>
 
-            <form onSubmit={onSubmit} className="p-8 space-y-4 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-8 space-y-4 overflow-y-auto">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
                 <input 
@@ -1211,8 +1228,8 @@ const SignUpModal = ({
                   required
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                   placeholder="Seu nome"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={localName}
+                  onChange={(e) => setLocalName(e.target.value)}
                 />
               </div>
               <div className="space-y-1">
@@ -1222,8 +1239,8 @@ const SignUpModal = ({
                   required
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                   placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={localEmail}
+                  onChange={(e) => setLocalEmail(e.target.value)}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1234,8 +1251,8 @@ const SignUpModal = ({
                     required
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                     placeholder="000.000.000-00"
-                    value={cpf}
-                    onChange={(e) => setCPF(e.target.value)}
+                    value={localCPF}
+                    onChange={(e) => setLocalCPF(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1">
@@ -1244,8 +1261,8 @@ const SignUpModal = ({
                     type="date" 
                     required
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                    value={birthDate}
-                    onChange={(e) => setBirthDate(e.target.value)}
+                    value={localBirthDate}
+                    onChange={(e) => setLocalBirthDate(e.target.value)}
                   />
                 </div>
               </div>
@@ -1256,8 +1273,8 @@ const SignUpModal = ({
                     required
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                     placeholder="Rua, número, bairro"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    value={localAddress}
+                    onChange={(e) => setLocalAddress(e.target.value)}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1268,8 +1285,8 @@ const SignUpModal = ({
                       required
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                       placeholder="Sua cidade"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      value={localCity}
+                      onChange={(e) => setLocalCity(e.target.value)}
                     />
                   </div>
                   <div className="space-y-1">
@@ -1279,8 +1296,8 @@ const SignUpModal = ({
                       required
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                       placeholder="00000-000"
-                      value={cep}
-                      onChange={(e) => setCEP(e.target.value)}
+                      value={localCEP}
+                      onChange={(e) => setLocalCEP(e.target.value)}
                     />
                   </div>
                 </div>
@@ -1289,8 +1306,8 @@ const SignUpModal = ({
                 <select 
                   required
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none"
-                  value={course}
-                  onChange={(e) => setCourse(e.target.value)}
+                  value={localCourse}
+                  onChange={(e) => setLocalCourse(e.target.value)}
                 >
                   <option value="">Selecione um curso</option>
                   {COURSES.map((c: string, i: number) => <option key={`signup-course-${c}-${i}`} value={c}>{c}</option>)}
@@ -1303,8 +1320,8 @@ const SignUpModal = ({
                   required
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                   placeholder="Crie uma senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={localPassword}
+                  onChange={(e) => setLocalPassword(e.target.value)}
                 />
               </div>
               <div className="space-y-1">
@@ -1314,8 +1331,8 @@ const SignUpModal = ({
                   required
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                   placeholder="Repita a senha"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  value={localConfirmPassword}
+                  onChange={(e) => setLocalConfirmPassword(e.target.value)}
                 />
               </div>
 
@@ -1347,7 +1364,7 @@ export default function App() {
       primary_color: "#1fbba6",
       secondary_color: "#0066cc",
       theme: "barao",
-      college_name: "Barão da Torre"
+      college_name: "Barão da Torre Academy"
     });
     const [isEnvMissing, setIsEnvMissing] = useState(false);
     
@@ -1390,8 +1407,8 @@ export default function App() {
           console.log("App settings loaded:", settings);
           if (settings) {
             // Global override to ensure the name and logo are always updated
-            if (settings.college_name === "Barão de Mauá") {
-              settings.college_name = "Barão da Torre";
+            if (settings.college_name === "Barão de Mauá" || settings.college_name === "Barão da Torre") {
+              settings.college_name = "Barão da Torre Academy";
             }
             
             const oldLogos = [
@@ -1451,16 +1468,6 @@ export default function App() {
     const [isForgotLoading, setIsForgotLoading] = useState(false);
 
     const [showSignUpModal, setShowSignUpModal] = useState(false);
-    const [signUpName, setSignUpName] = useState("");
-    const [signUpEmail, setSignUpEmail] = useState("");
-    const [signUpPassword, setSignUpPassword] = useState("");
-    const [signUpConfirmPassword, setSignUpConfirmPassword] = useState("");
-    const [signUpBirthDate, setSignUpBirthDate] = useState("");
-    const [signUpCPF, setSignUpCPF] = useState("");
-    const [signUpAddress, setSignUpAddress] = useState("");
-    const [signUpCity, setSignUpCity] = useState("");
-    const [signUpCEP, setSignUpCEP] = useState("");
-    const [signUpCourse, setSignUpCourse] = useState("");
     const [isSignUpLoading, setIsSignUpLoading] = useState(false);
     const [signUpSuccessMatricula, setSignUpSuccessMatricula] = useState<string | null>(null);
 
@@ -1480,10 +1487,10 @@ export default function App() {
     const handleOpenProof = (targetUser: User) => {
       if (!targetUser) return;
       
-      const url = targetUser.enrollment_proof_url;
+      const url = targetUser.enrollment_proof_urls?.[appSettings?.theme || 'barao'] || targetUser.enrollment_proof_url;
       
       if (!url || url === "EMPTY") {
-        alert("Comprovante de matrícula não disponível para este aluno.");
+        setDebugInfo("Comprovante de matrícula não disponível para este aluno.");
         return;
       }
       
@@ -1565,10 +1572,11 @@ export default function App() {
       setDebugInfo(null);
       
       try {
-        console.log(`Tentando login para matrícula: ${matricula}`);
+        console.log(`Tentando login para matrícula: ${matricula} (Modo: ${isSupabaseConfigured ? "Supabase" : "Local"})`);
         const userData = await db.login(matricula, password);
         
         if (userData) {
+          console.log("Login retornado pelo DB:", userData);
           if (userData.status === 'blocked') {
             setError("Sua conta está bloqueada. Aguarde a liberação pelo administrador.");
             setLoading(false);
@@ -1620,30 +1628,132 @@ export default function App() {
       setPassword("");
     };
 
+    const resetLocalData = () => {
+      if (window.confirm("Isso irá apagar todos os dados locais (alunos, notas, pagamentos) e restaurar o sistema para o estado inicial. Deseja continuar?")) {
+        localStorage.clear();
+        // Also clear IndexedDB if possible
+        if (window.indexedDB) {
+          const databases = ["edumanager_files"];
+          databases.forEach(dbName => {
+            const req = window.indexedDB.deleteDatabase(dbName);
+            req.onsuccess = () => console.log(`Database ${dbName} deleted`);
+          });
+        }
+        window.location.reload();
+      }
+    };
+
     const testConnection = async () => {
+      if (!isSupabaseConfigured) {
+        setDebugInfo("Você está no modo LOCAL STORAGE (Offline).\n\nPara usar o Supabase (Remoto):\n1. Vá no menu 'Settings' (ícone de engrenagem no canto superior direito do AI Studio).\n2. Adicione as chaves:\n   - VITE_SUPABASE_URL\n   - VITE_SUPABASE_ANON_KEY\n3. Salve e reinicie o servidor.");
+        return;
+      }
+
       setLoading(true);
-      setDebugInfo("Testando conexão...");
+      setDebugInfo("Testando conexão com Supabase...");
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Tempo limite de conexão excedido (10s). Verifique se a URL do Supabase está correta.")), 10000)
+      );
+
       try {
-        const { data, error, count } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true });
+        const connectionPromise = (async () => {
+          // Check users table
+          const { data: usersData, error: usersError, count } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true });
           
-        if (error) {
-          setDebugInfo(`Erro de Conexão: ${error.message}\nDetalhes: ${error.details}\nDica: ${error.hint}\nCódigo: ${error.code}`);
+          if (usersError) return { error: usersError };
+
+          // Check other tables
+          const tables = ['app_settings', 'schedules', 'announcements', 'news', 'online_classes', 'exams'];
+          const missingTables = [];
+          
+          for (const table of tables) {
+            const { error } = await supabase.from(table).select('id').limit(1);
+            if (error) missingTables.push(table);
+          }
+
+          return { usersError, count, missingTables };
+        })();
+
+        const result: any = await Promise.race([connectionPromise, timeoutPromise]);
+        const { usersError, count, missingTables } = result;
+          
+        if (usersError) {
+          setDebugInfo(`Erro de Conexão: ${usersError.message || "Erro desconhecido"}\nDetalhes: ${usersError.details || "Nenhum"}\nDica: ${usersError.hint || "Nenhuma"}\nCódigo: ${usersError.code || "N/A"}`);
         } else {
-          setDebugInfo(`Conexão OK!\nTotal de usuários no banco: ${count}\nURL: ${import.meta.env.VITE_SUPABASE_URL}`);
+          // Check if admin exists
+          const { data: adminData, error: adminError } = await supabase
+            .from('users')
+            .select('matricula, role')
+            .ilike('matricula', 'admin')
+            .single();
+
+          let adminStatus = "";
+          if (adminError) {
+            adminStatus = `\n⚠️ Usuário 'admin' NÃO encontrado no banco remoto!`;
+          } else {
+            adminStatus = `\n✅ Usuário 'admin' encontrado no Supabase (Role: ${adminData.role})`;
+          }
+
+          let tablesStatus = "";
+          if (missingTables && missingTables.length > 0) {
+            tablesStatus = `\n❌ Tabelas faltando no Supabase: ${missingTables.join(', ')}\n\n⚠️ Você PRECISA rodar o script SQL no Supabase SQL Editor primeiro!`;
+          } else {
+            tablesStatus = `\n✅ Todas as tabelas encontradas no Supabase.`;
+          }
+
+          setDebugInfo(`Conexão OK!\nTotal de usuários no banco: ${count}${adminStatus}${tablesStatus}\nURL: ${import.meta.env.VITE_SUPABASE_URL}`);
         }
       } catch (err: any) {
-        setDebugInfo(`Erro Crítico: ${err.message}`);
+        setDebugInfo(`Erro Crítico: ${err.message}\n\nIsso pode ser um erro de rede ou URL inválida.`);
       } finally {
         setLoading(false);
       }
     };
 
-    const handleSignUp = async (e: React.FormEvent) => {
-      e.preventDefault();
+    const emergencyLogin = () => {
+      const adminUser = {
+        id: 1,
+        matricula: "admin",
+        password: "admin",
+        name: "Administrador (Emergência)",
+        role: "admin",
+        status: "active"
+      };
+      setUser(adminUser);
+      setView("admin-dashboard");
+    };
 
-      if (signUpPassword !== signUpConfirmPassword) {
+    const restoreData = async () => {
+      console.log("restoreData clicked. initialData:", initialData);
+      setLoading(true);
+      setDebugInfo("Restaurando dados de exemplo... Por favor, aguarde.");
+      try {
+        if (!initialData) {
+          throw new Error("Dados iniciais não encontrados no código.");
+        }
+        // @ts-ignore
+        await db.bootstrapDatabase(initialData);
+        console.log("db.bootstrapDatabase finished successfully");
+        setDebugInfo("✅ Dados restaurados com sucesso no " + (isSupabaseConfigured ? "Supabase" : "Local Storage") + "!\n\nAgora você pode tentar logar com admin/admin.");
+        
+        if (!isSupabaseConfigured) {
+          setTimeout(() => window.location.reload(), 2000);
+        }
+      } catch (err: any) {
+        console.error("Error in restoreData:", err);
+        setDebugInfo("❌ Erro ao restaurar dados: " + err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleSignUp = async (signUpData: any) => {
+      console.log("handleSignUp started", signUpData);
+
+      if (signUpData.password !== signUpData.confirmPassword) {
         alert("As senhas não coincidem.");
         return;
       }
@@ -1655,34 +1765,35 @@ export default function App() {
         const random = Math.floor(1000 + Math.random() * 9000).toString();
         const generatedMatricula = year + random;
 
-        await db.signUp({
-          name: signUpName,
-          email: signUpEmail,
+        console.log("Calling db.signUp with matricula:", generatedMatricula);
+        
+        // Add a timeout to the signUp call
+        const signUpPromise = db.signUp({
+          name: signUpData.name,
+          email: signUpData.email,
           matricula: generatedMatricula,
-          password: signUpPassword,
-          course: signUpCourse,
-          cpf: signUpCPF,
-          birth_date: signUpBirthDate,
-          address: signUpAddress,
-          city: signUpCity,
-          cep: signUpCEP
+          password: signUpData.password,
+          course: signUpData.course,
+          cpf: signUpData.cpf,
+          birth_date: signUpData.birthDate,
+          address: signUpData.address,
+          city: signUpData.city,
+          cep: signUpData.cep
         });
+
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("A operação de inscrição expirou. Verifique sua conexão ou tente novamente.")), 15000)
+        );
+
+        await Promise.race([signUpPromise, timeoutPromise]);
+        console.log("db.signUp completed successfully");
         
         setSignUpSuccessMatricula(generatedMatricula);
-        // Reset fields
-        setSignUpName("");
-        setSignUpEmail("");
-        setSignUpPassword("");
-        setSignUpConfirmPassword("");
-        setSignUpBirthDate("");
-        setSignUpCPF("");
-        setSignUpAddress("");
-        setSignUpCity("");
-        setSignUpCEP("");
-        setSignUpCourse("");
       } catch (err: any) {
+        console.error("Error in handleSignUp:", err);
         alert(err.message || "Erro ao realizar inscrição");
       } finally {
+        console.log("handleSignUp finished (finally)");
         setIsSignUpLoading(false);
       }
     };
@@ -1690,14 +1801,10 @@ export default function App() {
 
 
 
-  // Views
-  const renderView = () => {
-    if (isEnvMissing && view === "login") {
-      return (
-        <>
-          <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white p-3 text-center text-sm font-bold shadow-lg">
-            ⚠️ Configuração do Supabase Ausente! Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nas configurações.
-          </div>
+    // Views
+    const renderView = () => {
+      if (view === "login" || !user) {
+        return (
           <LoginView 
             appSettings={appSettings}
             handleLogin={handleLogin}
@@ -1710,26 +1817,11 @@ export default function App() {
             onForgotClick={() => setShowForgotModal(true)}
             onSignUpClick={() => setShowSignUpModal(true)}
           />
-        </>
-      );
-    }
+        );
+      }
 
-    switch (view) {
-      case "login": return (
-        <LoginView 
-          appSettings={appSettings}
-          handleLogin={handleLogin}
-          matricula={matricula}
-          setMatricula={setMatricula}
-          password={password}
-          setPassword={setPassword}
-          error={error}
-          loading={loading}
-          onForgotClick={() => setShowForgotModal(true)}
-          onSignUpClick={() => setShowSignUpModal(true)}
-        />
-      );
-      case "dashboard": return <StudentDashboard />;
+      switch (view) {
+        case "dashboard": return <StudentDashboard />;
       case "grades": return <GradesView />;
       case "schedule": return <ScheduleView />;
       case "announcements": return <AnnouncementsView />;
@@ -1748,41 +1840,7 @@ export default function App() {
           setShowToast={setShowToast}
         />
       );
-      default: return (
-        <>
-          {isEnvMissing && (
-            <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white p-3 text-center text-sm font-bold shadow-lg">
-              ⚠️ Configuração do Supabase Ausente! Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nas configurações.
-            </div>
-          )}
-          <LoginView 
-            appSettings={appSettings}
-            handleLogin={handleLogin}
-            matricula={matricula}
-            setMatricula={setMatricula}
-            password={password}
-            setPassword={setPassword}
-            error={error}
-            loading={loading}
-            onForgotClick={() => setShowForgotModal(true)}
-            onSignUpClick={() => setShowSignUpModal(true)}
-          />
-          
-          <div className="fixed bottom-4 left-4 right-4 flex flex-col items-center gap-2">
-            <button 
-              onClick={testConnection}
-              className="text-[10px] text-slate-400 hover:text-slate-600 underline"
-            >
-              Verificar Conexão com Supabase
-            </button>
-            {debugInfo && (
-              <div className="bg-slate-800 text-white text-[10px] p-3 rounded-lg max-w-md w-full overflow-auto whitespace-pre-wrap font-mono">
-                {debugInfo}
-              </div>
-            )}
-          </div>
-        </>
-      );
+      default: return null;
     }
   };
 
@@ -2298,7 +2356,7 @@ export default function App() {
 
   const VirtualCardView = () => (
     <div className={cn(
-      "min-h-screen flex flex-col",
+      "min-h-screen flex flex-col overflow-y-auto pb-20",
       appSettings?.theme === 'retro' ? "bg-[#e9f1f2]" : 
       appSettings?.theme === 'uni' ? "bg-[#f5f6f8]" : 
       appSettings?.theme === 'barao' ? "bg-slate-50" : "bg-slate-900"
@@ -2787,24 +2845,23 @@ export default function App() {
                   <QRCodeSVG value={`STUDENT:${user?.matricula}`} size={180} />
                 </div>
                 <p className="text-slate-400 text-sm text-center max-w-xs mb-8">
-                  Apresente este QR Code para acesso às dependências da faculdade e validação de meia-entrada.
+                  Apresente este QR Code para acesso às dependências da Academy e validação de meia-entrada.
                 </p>
               </>
             )}
 
-            {(user?.enrollment_proof_urls?.[appSettings?.theme || 'barao'] || user?.enrollment_proof_url) && (
-              <button 
-                onClick={() => handleOpenProof(user!)}
-                className={cn(
-                  "w-full py-4 font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all",
-                  appSettings?.theme === 'uniplan' ? "bg-[#e31a22] text-white rounded-2xl" :
-                  appSettings?.theme === 'retro' ? "bg-[#00a2b1] text-white rounded-xl" : 
-                  appSettings?.theme === 'uni' ? "bg-[#0044a8] text-white rounded-2xl" : "bg-brand-teal text-white rounded-2xl"
-                )}
-              >
-                <FileCheck className="w-5 h-5" /> Comprovante de matrícula
-              </button>
-            )}
+            <button 
+              onClick={() => handleOpenProof(user!)}
+              className={cn(
+                "w-full py-4 font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all",
+                appSettings?.theme === 'uniplan' ? "bg-[#e31a22] text-white rounded-2xl" :
+                appSettings?.theme === 'retro' ? "bg-[#00a2b1] text-white rounded-xl" : 
+                appSettings?.theme === 'uni' ? "bg-[#0044a8] text-white rounded-2xl" : 
+                appSettings?.theme === 'barao' ? "bg-[#00a2b1] text-white rounded-2xl" : "bg-brand-teal text-white rounded-2xl"
+              )}
+            >
+              <FileCheck className="w-5 h-5" /> Comprovante de matrícula
+            </button>
 
             {appSettings?.theme !== 'uni' && (
               <>
@@ -3350,6 +3407,7 @@ export default function App() {
         )}
         
         <ForgotRecoveryModal 
+          key="forgot-modal"
           isOpen={showForgotModal}
           onClose={resetForgotFlow}
           step={forgotStep}
@@ -3363,31 +3421,12 @@ export default function App() {
           onAction={handleForgotAction}
         />
         <SignUpModal 
+          key="signup-modal"
           isOpen={showSignUpModal}
           onClose={() => { setShowSignUpModal(false); setSignUpSuccessMatricula(null); }}
           successMatricula={signUpSuccessMatricula}
           isLoading={isSignUpLoading}
           onSubmit={handleSignUp}
-          name={signUpName}
-          setName={setSignUpName}
-          email={signUpEmail}
-          setEmail={setSignUpEmail}
-          password={signUpPassword}
-          setPassword={setSignUpPassword}
-          confirmPassword={signUpConfirmPassword}
-          setConfirmPassword={setSignUpConfirmPassword}
-          birthDate={signUpBirthDate}
-          setBirthDate={setSignUpBirthDate}
-          cpf={signUpCPF}
-          setCPF={setSignUpCPF}
-          address={signUpAddress}
-          setAddress={setSignUpAddress}
-          city={signUpCity}
-          setCity={setSignUpCity}
-          cep={signUpCEP}
-          setCEP={setSignUpCEP}
-          course={signUpCourse}
-          setCourse={setSignUpCourse}
         />
       </AnimatePresence>
       {renderView()}

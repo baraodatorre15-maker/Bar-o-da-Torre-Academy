@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@theme {
+  --color-brand-blue: #00678a;
+  --color-brand-teal: #00a2b1;
+}
+
 @layer base {
   * {
     @apply border-white/10;

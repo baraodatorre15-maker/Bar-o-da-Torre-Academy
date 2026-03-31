@@ -1,43 +1,68 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://uojwhcfytzmuiytcwddk.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_QUeG3lUzrI6bWNwUVpxeXw_sDr9SLVJ';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 let supabaseInstance: any = null;
 
 console.log('Initializing Supabase with URL:', supabaseUrl);
 try {
-  if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'YOUR_SUPABASE_URL') {
+  if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'YOUR_SUPABASE_URL' && supabaseUrl !== '') {
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
     console.log('Supabase client initialized successfully.');
   } else {
     console.warn('Supabase URL or Anon Key is missing or invalid. Using mock client.');
-    // Create a proxy that logs errors instead of crashing
+    
+    const createMockError = (msg: string) => Promise.resolve({ 
+      data: null, 
+      error: { 
+        message: msg, 
+        details: 'Configuração ausente', 
+        hint: 'Verifique as chaves no menu Settings', 
+        code: 'CONFIG_MISSING' 
+      }, 
+      count: 0 
+    });
+    
+    const mockQueryBuilder = () => {
+      const p = createMockError('Supabase não configurado');
+      // @ts-ignore
+      p.eq = mockQueryBuilder;
+      // @ts-ignore
+      p.ilike = mockQueryBuilder;
+      // @ts-ignore
+      p.single = () => createMockError('Supabase não configurado');
+      // @ts-ignore
+      p.maybeSingle = () => createMockError('Supabase não configurado');
+      // @ts-ignore
+      p.order = mockQueryBuilder;
+      // @ts-ignore
+      p.limit = mockQueryBuilder;
+      // @ts-ignore
+      p.select = mockQueryBuilder;
+      return p;
+    };
+
     supabaseInstance = {
       from: () => ({
-        select: () => ({ 
-          eq: () => ({ 
-            single: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }), 
-            limit: () => ({}),
-            order: () => ({})
-          }), 
-          order: () => ({}) 
-        }),
-        insert: () => Promise.resolve({ error: { message: 'Supabase not initialized' } }),
-        update: () => ({ eq: () => Promise.resolve({ error: { message: 'Supabase not initialized' } }) }),
-        delete: () => ({ eq: () => Promise.resolve({ error: { message: 'Supabase not initialized' } }) }),
+        select: mockQueryBuilder,
+        insert: () => createMockError('Supabase não configurado'),
+        update: () => ({ eq: mockQueryBuilder }),
+        delete: () => ({ eq: mockQueryBuilder }),
+        upsert: () => createMockError('Supabase não configurado'),
       }),
+      auth: {
+        signUp: () => createMockError('Supabase não configurado'),
+        signInWithPassword: () => createMockError('Supabase não configurado'),
+        signOut: () => createMockError('Supabase não configurado'),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      },
       storage: {
         from: () => ({
-          upload: () => Promise.resolve({ error: { message: 'Supabase not initialized' } }),
+          upload: () => createMockError('Supabase não configurado'),
           getPublicUrl: () => ({ data: { publicUrl: '' } }),
+          remove: () => createMockError('Supabase não configurado'),
         })
-      },
-      auth: {
-        signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
-        signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
-        signOut: () => Promise.resolve({ error: { message: 'Supabase not initialized' } }),
-        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
       }
     };
   }
@@ -45,5 +70,8 @@ try {
   console.error('Failed to initialize Supabase client:', error);
 }
 
-export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey && supabaseUrl !== 'YOUR_SUPABASE_URL';
+export const isSupabaseConfigured = !!import.meta.env.VITE_SUPABASE_URL && 
+  !!import.meta.env.VITE_SUPABASE_ANON_KEY && 
+  import.meta.env.VITE_SUPABASE_URL !== 'YOUR_SUPABASE_URL' &&
+  import.meta.env.VITE_SUPABASE_URL !== '';
 export const supabase = supabaseInstance;
