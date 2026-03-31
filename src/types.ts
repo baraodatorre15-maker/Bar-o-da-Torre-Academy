@@ -17,6 +17,9 @@ export interface User {
   marital_status?: string;
   short_name?: string;
   email?: string;
+  address?: string;
+  city?: string;
+  cep?: string;
   role: 'admin' | 'student';
   status?: 'active' | 'blocked';
   photo_url?: string;

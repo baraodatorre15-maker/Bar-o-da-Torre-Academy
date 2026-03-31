@@ -993,6 +993,347 @@ const parseDate = (dateStr: string | undefined) => {
   return dateStr;
 };
 
+
+const ForgotRecoveryModal = ({ 
+  isOpen, 
+  onClose, 
+  step, 
+  setStep, 
+  type, 
+  setType, 
+  email, 
+  setEmail, 
+  result, 
+  isLoading, 
+  onAction 
+}: any) => {
+  if (!isOpen) return null;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+    >
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl"
+      >
+        <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+          <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Recuperar Acesso</h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
+        </div>
+
+        <div className="p-8">
+          {step === 'options' ? (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500 font-medium mb-6">Qual informação você esqueceu?</p>
+              <button 
+                onClick={() => { setType('password'); setStep('input'); }}
+                className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl flex items-center gap-4 hover:border-blue-500 hover:bg-blue-50 transition-all group text-left"
+              >
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-800">Minha Senha</p>
+                  <p className="text-xs text-slate-500">Resetar senha via e-mail</p>
+                </div>
+              </button>
+              <button 
+                onClick={() => { setType('matricula'); setStep('input'); }}
+                className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl flex items-center gap-4 hover:border-indigo-500 hover:bg-indigo-50 transition-all group text-left"
+              >
+                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+                  <UserSquare2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-800">Minha Matrícula</p>
+                  <p className="text-xs text-slate-500">Ver meu RA/Matrícula</p>
+                </div>
+              </button>
+            </div>
+          ) : step === 'input' ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setStep('options')} className="p-2 bg-slate-100 rounded-xl">
+                  <ArrowLeft className="w-4 h-4 text-slate-600" />
+                </button>
+                <h4 className="font-bold text-slate-700">Informe seu E-mail</h4>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">Informe o e-mail cadastrado para recuperar sua {type === 'password' ? 'senha' : 'matrícula'}.</p>
+              
+              <div className="space-y-2">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <input 
+                    type="email" 
+                    className="input-field pl-12 h-14 rounded-2xl"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={onAction}
+                disabled={!email || isLoading}
+                className="w-full h-14 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "PROSSEGUIR"}
+              </button>
+            </div>
+          ) : (
+            <div className="text-center space-y-6 py-4">
+              {result?.success ? (
+                <>
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
+                    <CheckCircle2 className="w-10 h-10" />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-bold text-slate-800">{type === 'password' ? 'E-mail Enviado!' : 'Sua Matrícula'}</h4>
+                    <p className="text-sm text-slate-500 mt-2 px-4">
+                      {type === 'password' ? result.message : (
+                        <>Sua matrícula é: <span className="font-black text-indigo-600 text-lg">{result.matricula}</span></>
+                      )}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600">
+                    <AlertCircle className="w-10 h-10" />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-bold text-slate-800">Ops! Algo deu errado</h4>
+                    <p className="text-sm text-slate-500 mt-2">{result?.message}</p>
+                  </div>
+                </>
+              )}
+
+              <button 
+                onClick={onClose}
+                className="w-full h-14 bg-slate-900 text-white font-bold rounded-2xl active:scale-95 transition-all"
+              >
+                FECHAR
+              </button>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const SignUpModal = ({ 
+  isOpen, 
+  onClose, 
+  successMatricula, 
+  isLoading, 
+  onSubmit,
+  name, setName,
+  email, setEmail,
+  password, setPassword,
+  confirmPassword, setConfirmPassword,
+  birthDate, setBirthDate,
+  cpf, setCPF,
+  address, setAddress,
+  city, setCity,
+  cep, setCEP,
+  course, setCourse
+}: any) => {
+  if (!isOpen) return null;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+    >
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+      >
+        {successMatricula ? (
+          <div className="p-8 text-center space-y-6 overflow-y-auto">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-10 h-10 text-green-600" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Inscrição Realizada!</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Sua inscrição foi concluída com sucesso. Guarde seu número de matrícula (RA) abaixo para acessar o portal.
+              </p>
+            </div>
+            
+            <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-6 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sua Matrícula (RA)</span>
+              <div className="text-3xl font-black text-blue-600 tracking-wider font-mono">
+                {successMatricula}
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex gap-3 text-left">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+              <p className="text-[10px] text-amber-800 font-medium leading-tight">
+                Sua conta está em análise e aguarda liberação pelo administrador. Você poderá acessar o portal assim que for aprovado.
+              </p>
+            </div>
+
+            <button 
+              onClick={onClose}
+              className="w-full h-14 bg-slate-900 hover:bg-black text-white font-bold rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              Concluído
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Nova Inscrição</h3>
+              <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <form onSubmit={onSubmit} className="p-8 space-y-4 overflow-y-auto">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+                <input 
+                  type="text" 
+                  required
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  placeholder="Seu nome"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
+                <input 
+                  type="email" 
+                  required
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">CPF</label>
+                  <input 
+                    type="text" 
+                    required
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                    placeholder="000.000.000-00"
+                    value={cpf}
+                    onChange={(e) => setCPF(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Data Nasc.</label>
+                  <input 
+                    type="date" 
+                    required
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                  />
+                </div>
+              </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Endereço</label>
+                  <input 
+                    type="text" 
+                    required
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                    placeholder="Rua, número, bairro"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Cidade</label>
+                    <input 
+                      type="text" 
+                      required
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                      placeholder="Sua cidade"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">CEP</label>
+                    <input 
+                      type="text" 
+                      required
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                      placeholder="00000-000"
+                      value={cep}
+                      onChange={(e) => setCEP(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Curso</label>
+                <select 
+                  required
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none"
+                  value={course}
+                  onChange={(e) => setCourse(e.target.value)}
+                >
+                  <option value="">Selecione um curso</option>
+                  {COURSES.map((c: string, i: number) => <option key={`signup-course-${c}-${i}`} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Senha</label>
+                <input 
+                  type="password" 
+                  required
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  placeholder="Crie uma senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Confirmar Senha</label>
+                <input 
+                  type="password" 
+                  required
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  placeholder="Repita a senha"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4 shrink-0"
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Realizar Inscrição"}
+              </button>
+            </form>
+          </>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+};
+
 export default function App() {
   console.log("App component starting to render...");
   try {
@@ -1010,6 +1351,29 @@ export default function App() {
     });
     const [isEnvMissing, setIsEnvMissing] = useState(false);
     
+    const [data, setData] = useState<{
+      grades: any[];
+      schedule: any[];
+      announcements: any[];
+      payments: any[];
+      activities: any[];
+      exams: any[];
+      online_classes: any[];
+      news: any[];
+    }>({
+      grades: [],
+      schedule: [],
+      announcements: [],
+      payments: [],
+      activities: [],
+      exams: [],
+      online_classes: [],
+      news: []
+    });
+
+    const [newsIndex, setNewsIndex] = useState(0);
+    const [showProofUrl, setShowProofUrl] = useState<string | null>(null);
+
     useEffect(() => {
       console.log("App useEffect running...");
       if (!isSupabaseConfigured) {
@@ -1051,7 +1415,24 @@ export default function App() {
       };
       loadSettings();
     }, []);
+
+    useEffect(() => {
+      if (view === "dashboard" && data.news && data.news.length > 0) {
+        const interval = setInterval(() => {
+          setNewsIndex(prev => (prev + 1) % data.news.length);
+        }, 5000);
+        return () => clearInterval(interval);
+      }
+    }, [view, data.news]);
+
     const [showToast, setShowToast] = useState(false);
+    useEffect(() => {
+      if (showToast) {
+        const timer = setTimeout(() => setShowToast(false), 3000);
+        return () => clearTimeout(timer);
+      }
+    }, [showToast]);
+
     const [isSimulatingLoading, setIsSimulatingLoading] = useState(false);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editBirthState, setEditBirthState] = useState("");
@@ -1073,6 +1454,12 @@ export default function App() {
     const [signUpName, setSignUpName] = useState("");
     const [signUpEmail, setSignUpEmail] = useState("");
     const [signUpPassword, setSignUpPassword] = useState("");
+    const [signUpConfirmPassword, setSignUpConfirmPassword] = useState("");
+    const [signUpBirthDate, setSignUpBirthDate] = useState("");
+    const [signUpCPF, setSignUpCPF] = useState("");
+    const [signUpAddress, setSignUpAddress] = useState("");
+    const [signUpCity, setSignUpCity] = useState("");
+    const [signUpCEP, setSignUpCEP] = useState("");
     const [signUpCourse, setSignUpCourse] = useState("");
     const [isSignUpLoading, setIsSignUpLoading] = useState(false);
     const [signUpSuccessMatricula, setSignUpSuccessMatricula] = useState<string | null>(null);
@@ -1082,24 +1469,144 @@ export default function App() {
 
     console.log("App state initialized. Current view:", view);
 
+    const navigateTo = (newView: string) => {
+      setIsDashboardLoading(true);
+      setTimeout(() => {
+        setView(newView);
+        setIsDashboardLoading(false);
+      }, 1200);
+    };
+
+    const handleOpenProof = (targetUser: User) => {
+      if (!targetUser) return;
+      
+      const url = targetUser.enrollment_proof_url;
+      
+      if (!url || url === "EMPTY") {
+        alert("Comprovante de matrícula não disponível para este aluno.");
+        return;
+      }
+      
+      // For external links, use window.open as usual
+      if (!url.startsWith('data:')) {
+        window.open(url, '_blank');
+        return;
+      }
+
+      // For data URLs (PDF/Image), use the internal viewer to avoid blocked popups on Android
+      setShowProofUrl(url);
+    };
+
+    const handleForgotAction = async () => {
+      if (!forgotEmail) return;
+      setIsForgotLoading(true);
+      
+      // Simulate API delay
+      await new Promise(r => setTimeout(r, 1500));
+      
+      const foundUser = await db.getUserByEmail(forgotEmail);
+      
+      if (forgotType === 'matricula') {
+        if (foundUser) {
+          setForgotResult({ success: true, matricula: foundUser.matricula });
+        } else {
+          setForgotResult({ success: false, message: "E-mail não encontrado em nossa base de dados." });
+        }
+      } else {
+        // Password reset simulation
+        if (foundUser) {
+          setForgotResult({ success: true, message: "Um link de recuperação foi enviado para seu e-mail." });
+        } else {
+          setForgotResult({ success: false, message: "E-mail não encontrado em nossa base de dados." });
+        }
+      }
+      
+      setForgotStep('result');
+      setIsForgotLoading(false);
+    };
+
+    const resetForgotFlow = () => {
+      setShowForgotModal(false);
+      setForgotStep('options');
+      setForgotEmail('');
+      setForgotResult(null);
+    };
+
+    const fetchStudentData = async (id: number) => {
+      const dashboardData = await db.getStudentDashboard(id);
+      
+      // Auto-generate data if grades are empty
+      if (dashboardData.grades.length === 0) {
+        setLoading(true);
+        try {
+          await db.generateStudentFictionalData(id);
+          const updatedData = await db.getStudentDashboard(id);
+          setData(updatedData);
+        } catch (error) {
+          console.error("Erro ao gerar dados automáticos:", error);
+          setData(dashboardData);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setData(dashboardData);
+      }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
       e.preventDefault();
+      if (!matricula || !password) {
+        setError("Por favor, preencha todos os campos.");
+        return;
+      }
+
       setLoading(true);
       setError("");
+      setDebugInfo(null);
+      
       try {
-        console.log(`Attempting login for ${matricula}`);
-        const loggedUser = await db.login(matricula, password);
-        if (loggedUser) {
-          console.log("Login successful:", loggedUser.name);
-          setUser(loggedUser);
-          setView(loggedUser.role === "admin" ? "admin-dashboard" : "dashboard");
+        console.log(`Tentando login para matrícula: ${matricula}`);
+        const userData = await db.login(matricula, password);
+        
+        if (userData) {
+          if (userData.status === 'blocked') {
+            setError("Sua conta está bloqueada. Aguarde a liberação pelo administrador.");
+            setLoading(false);
+            return;
+          }
+          console.log("Login bem-sucedido para:", userData.name);
+          if (userData.role === 'admin') {
+            setUser(userData);
+            setView("admin-dashboard");
+          } else {
+            setEditBirthState(userData.birth_state || "");
+            setEditNationality(userData.nationality || "");
+            setEditGender(userData.gender || "");
+            setEditMaritalStatus(userData.marital_status || "");
+            setEditShortName(userData.short_name || "");
+            setEditPhotoUrl(userData.photo_url || "");
+            setIsSimulatingLoading(true);
+            
+            setTimeout(() => {
+              setUser(userData);
+              if (userData.regularity && userData.regularity !== 'Regular') {
+                setView("financial");
+                setError("Sua conta possui pendências. Por favor, regularize sua situação financeira para acessar o portal completo.");
+              } else {
+                setView("dashboard");
+              }
+              fetchStudentData(userData.id);
+              setIsSimulatingLoading(false);
+            }, 3000);
+          }
         } else {
-          console.warn("Login failed: Invalid credentials");
+          console.warn("Login falhou: Credenciais incorretas.");
           setError("Matrícula ou senha incorretos.");
         }
       } catch (err: any) {
-        console.error("Login error:", err);
-        setError(err.message || "Ocorreu um erro ao fazer login.");
+        console.error("Erro inesperado no handleLogin:", err);
+        setError("Erro ao conectar com o servidor.");
+        setDebugInfo(err.message || JSON.stringify(err));
       } finally {
         setLoading(false);
       }
@@ -1114,510 +1621,74 @@ export default function App() {
     };
 
     const testConnection = async () => {
-      console.log("Testing Supabase connection...");
       setLoading(true);
+      setDebugInfo("Testando conexão...");
       try {
-        const { data, error } = await supabase.from('users').select('count').single();
-        if (error) throw error;
-        setDebugInfo(`Conexão bem-sucedida!\nTotal de usuários: ${data.count}`);
+        const { data, error, count } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true });
+          
+        if (error) {
+          setDebugInfo(`Erro de Conexão: ${error.message}\nDetalhes: ${error.details}\nDica: ${error.hint}\nCódigo: ${error.code}`);
+        } else {
+          setDebugInfo(`Conexão OK!\nTotal de usuários no banco: ${count}\nURL: ${import.meta.env.VITE_SUPABASE_URL}`);
+        }
       } catch (err: any) {
-        console.error("Connection test failed:", err);
-        setDebugInfo(`Erro na conexão: ${err.message || JSON.stringify(err)}`);
+        setDebugInfo(`Erro Crítico: ${err.message}`);
       } finally {
         setLoading(false);
       }
     };
 
     const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSignUpLoading(true);
-    try {
-      // Generate matrícula: 4 digits year + 4 random digits
-      const year = new Date().getFullYear().toString();
-      const random = Math.floor(1000 + Math.random() * 9000).toString();
-      const generatedMatricula = year + random;
+      e.preventDefault();
 
-      await db.signUp({
-        name: signUpName,
-        email: signUpEmail,
-        matricula: generatedMatricula,
-        password: signUpPassword,
-        course: signUpCourse
-      });
-      
-      setSignUpSuccessMatricula(generatedMatricula);
-      // Reset fields
-      setSignUpName("");
-      setSignUpEmail("");
-      setSignUpPassword("");
-      setSignUpCourse("");
-    } catch (err: any) {
-      alert(err.message || "Erro ao realizar inscrição");
-    } finally {
-      setIsSignUpLoading(false);
-    }
-  };
+      if (signUpPassword !== signUpConfirmPassword) {
+        alert("As senhas não coincidem.");
+        return;
+      }
 
-  const SignUpModal = () => {
-    if (!showSignUpModal) return null;
+      setIsSignUpLoading(true);
+      try {
+        // Generate matrícula: 4 digits year + 4 random digits
+        const year = new Date().getFullYear().toString();
+        const random = Math.floor(1000 + Math.random() * 9000).toString();
+        const generatedMatricula = year + random;
 
-    const handleClose = () => {
-      setShowSignUpModal(false);
-      setSignUpSuccessMatricula(null);
+        await db.signUp({
+          name: signUpName,
+          email: signUpEmail,
+          matricula: generatedMatricula,
+          password: signUpPassword,
+          course: signUpCourse,
+          cpf: signUpCPF,
+          birth_date: signUpBirthDate,
+          address: signUpAddress,
+          city: signUpCity,
+          cep: signUpCEP
+        });
+        
+        setSignUpSuccessMatricula(generatedMatricula);
+        // Reset fields
+        setSignUpName("");
+        setSignUpEmail("");
+        setSignUpPassword("");
+        setSignUpConfirmPassword("");
+        setSignUpBirthDate("");
+        setSignUpCPF("");
+        setSignUpAddress("");
+        setSignUpCity("");
+        setSignUpCEP("");
+        setSignUpCourse("");
+      } catch (err: any) {
+        alert(err.message || "Erro ao realizar inscrição");
+      } finally {
+        setIsSignUpLoading(false);
+      }
     };
 
-    return (
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
-      >
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl"
-        >
-          {signUpSuccessMatricula ? (
-            <div className="p-8 text-center space-y-6">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-10 h-10 text-green-600" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Inscrição Realizada!</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">
-                  Sua inscrição foi concluída com sucesso. Guarde seu número de matrícula (RA) abaixo para acessar o portal.
-                </p>
-              </div>
-              
-              <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-6 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sua Matrícula (RA)</span>
-                <div className="text-3xl font-black text-blue-600 tracking-wider font-mono">
-                  {signUpSuccessMatricula}
-                </div>
-              </div>
 
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex gap-3 text-left">
-                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-                <p className="text-[10px] text-amber-800 font-medium leading-tight">
-                  Sua conta está em análise e aguarda liberação pelo administrador. Você poderá acessar o portal assim que for aprovado.
-                </p>
-              </div>
 
-              <button 
-                onClick={handleClose}
-                className="w-full h-14 bg-slate-900 hover:bg-black text-white font-bold rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                Concluído
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Nova Inscrição</h3>
-                <button onClick={handleClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSignUp} className="p-8 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
-                  <input 
-                    type="text" 
-                    required
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                    placeholder="Seu nome"
-                    value={signUpName}
-                    onChange={(e) => setSignUpName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
-                  <input 
-                    type="email" 
-                    required
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                    placeholder="seu@email.com"
-                    value={signUpEmail}
-                    onChange={(e) => setSignUpEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Senha</label>
-                  <input 
-                    type="password" 
-                    required
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                    placeholder="Crie uma senha"
-                    value={signUpPassword}
-                    onChange={(e) => setSignUpPassword(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Curso</label>
-                  <select 
-                    required
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none"
-                    value={signUpCourse}
-                    onChange={(e) => setSignUpCourse(e.target.value)}
-                  >
-                    <option value="">Selecione um curso</option>
-                    {COURSES.map((c, i) => <option key={`signup-course-${c}-${i}`} value={c}>{c}</option>)}
-                  </select>
-                </div>
-
-                <button 
-                  type="submit" 
-                  disabled={isSignUpLoading}
-                  className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4"
-                >
-                  {isSignUpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Realizar Inscrição"}
-                </button>
-              </form>
-            </>
-          )}
-        </motion.div>
-      </motion.div>
-    );
-  };
-
-  const ForgotRecoveryModal = () => {
-    if (!showForgotModal) return null;
-
-    return (
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
-      >
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl"
-        >
-          <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Recuperar Acesso</h3>
-            <button onClick={resetForgotFlow} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-              <X className="w-5 h-5 text-slate-400" />
-            </button>
-          </div>
-
-          <div className="p-8">
-            {forgotStep === 'options' ? (
-              <div className="space-y-4">
-                <p className="text-sm text-slate-500 font-medium mb-6">Qual informação você esqueceu?</p>
-                <button 
-                  onClick={() => { setForgotType('password'); setForgotStep('input'); }}
-                  className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl flex items-center gap-4 hover:border-blue-500 hover:bg-blue-50 transition-all group text-left"
-                >
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-                    <Lock className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-800">Minha Senha</p>
-                    <p className="text-xs text-slate-500">Resetar senha via e-mail</p>
-                  </div>
-                </button>
-                <button 
-                  onClick={() => { setForgotType('matricula'); setForgotStep('input'); }}
-                  className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl flex items-center gap-4 hover:border-indigo-500 hover:bg-indigo-50 transition-all group text-left"
-                >
-                  <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
-                    <UserSquare2 className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-800">Minha Matrícula</p>
-                    <p className="text-xs text-slate-500">Ver meu RA/Matrícula</p>
-                  </div>
-                </button>
-              </div>
-            ) : forgotStep === 'input' ? (
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <button onClick={() => setForgotStep('options')} className="p-2 bg-slate-100 rounded-xl">
-                    <ArrowLeft className="w-4 h-4 text-slate-600" />
-                  </button>
-                  <h4 className="font-bold text-slate-700">Informe seu E-mail</h4>
-                </div>
-                <p className="text-xs text-slate-500 leading-relaxed font-medium">Informe o e-mail cadastrado para recuperar sua {forgotType === 'password' ? 'senha' : 'matrícula'}.</p>
-                
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                    <input 
-                      type="email" 
-                      className="input-field pl-12 h-14 rounded-2xl"
-                      placeholder="seu@email.com"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <button 
-                  onClick={handleForgotAction}
-                  disabled={!forgotEmail || isForgotLoading}
-                  className="w-full h-14 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                  {isForgotLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "PROSSEGUIR"}
-                </button>
-              </div>
-            ) : (
-              <div className="text-center space-y-6 py-4">
-                {forgotResult?.success ? (
-                  <>
-                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
-                      <CheckCircle2 className="w-10 h-10" />
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-bold text-slate-800">{forgotType === 'password' ? 'E-mail Enviado!' : 'Sua Matrícula'}</h4>
-                      <p className="text-sm text-slate-500 mt-2 px-4">
-                        {forgotType === 'password' ? forgotResult.message : (
-                          <>Sua matrícula é: <span className="font-black text-indigo-600 text-lg">{forgotResult.matricula}</span></>
-                        )}
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600">
-                      <AlertCircle className="w-10 h-10" />
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-bold text-slate-800">Ops! Algo deu errado</h4>
-                      <p className="text-sm text-slate-500 mt-2">{forgotResult?.message}</p>
-                    </div>
-                  </>
-                )}
-
-                <button 
-                  onClick={forgotResult?.success && forgotType === 'matricula' ? () => { setMatricula(forgotResult.matricula); resetForgotFlow(); } : resetForgotFlow}
-                  className="w-full h-14 bg-slate-900 text-white font-bold rounded-2xl active:scale-95 transition-all"
-                >
-                  {forgotResult?.success && forgotType === 'matricula' ? "USAR ESTA MATRÍCULA" : "FECHAR"}
-                </button>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      </motion.div>
-    );
-  };
-
-  const navigateTo = (newView: string) => {
-    setIsDashboardLoading(true);
-    setTimeout(() => {
-      setView(newView);
-      setIsDashboardLoading(false);
-    }, 1200);
-  };
-
-  const [data, setData] = useState<{
-    grades: any[];
-    schedule: any[];
-    announcements: any[];
-    payments: any[];
-    activities: any[];
-    exams: any[];
-    online_classes: any[];
-    news: any[];
-  }>({
-    grades: [],
-    schedule: [],
-    announcements: [],
-    payments: [],
-    activities: [],
-    exams: [],
-    online_classes: [],
-    news: []
-  });
-
-  const [newsIndex, setNewsIndex] = useState(0);
-
-  useEffect(() => {
-    if (view === "dashboard" && data.news && data.news.length > 0) {
-      const interval = setInterval(() => {
-        setNewsIndex(prev => (prev + 1) % data.news.length);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [view, data.news]);
-
-  // Login Form
-  const [matricula, setMatricula] = useState("");
-  const [password, setPassword] = useState("");
-  const [showProofUrl, setShowProofUrl] = useState<string | null>(null);
-
-  const handleOpenProof = (targetUser: User) => {
-    if (!targetUser) return;
-    
-    const url = targetUser.enrollment_proof_url;
-    
-    if (!url || url === "EMPTY") {
-      alert("Comprovante de matrícula não disponível para este aluno.");
-      return;
-    }
-    
-    // For external links, use window.open as usual
-    if (!url.startsWith('data:')) {
-      window.open(url, '_blank');
-      return;
-    }
-
-    // For data URLs (PDF/Image), use the internal viewer to avoid blocked popups on Android
-    setShowProofUrl(url);
-  };
-
-  const handleForgotAction = async () => {
-    if (!forgotEmail) return;
-    setIsForgotLoading(true);
-    
-    // Simulate API delay
-    await new Promise(r => setTimeout(r, 1500));
-    
-    const foundUser = await db.getUserByEmail(forgotEmail);
-    
-    if (forgotType === 'matricula') {
-      if (foundUser) {
-        setForgotResult({ success: true, matricula: foundUser.matricula });
-      } else {
-        setForgotResult({ success: false, message: "E-mail não encontrado em nossa base de dados." });
-      }
-    } else {
-      // Password reset simulation
-      if (foundUser) {
-        setForgotResult({ success: true, message: "Um link de recuperação foi enviado para seu e-mail." });
-      } else {
-        setForgotResult({ success: false, message: "E-mail não encontrado em nossa base de dados." });
-      }
-    }
-    
-    setForgotStep('result');
-    setIsForgotLoading(false);
-  };
-
-  const resetForgotFlow = () => {
-    setShowForgotModal(false);
-    setForgotStep('options');
-    setForgotEmail('');
-    setForgotResult(null);
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!matricula || !password) {
-      setError("Por favor, preencha todos os campos.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setDebugInfo(null);
-    
-    try {
-      console.log(`Tentando login para matrícula: ${matricula}`);
-      const userData = await db.login(matricula, password);
-      
-      if (userData) {
-        if (userData.status === 'blocked') {
-          setError("Sua conta está bloqueada. Aguarde a liberação pelo administrador.");
-          setLoading(false);
-          return;
-        }
-        console.log("Login bem-sucedido para:", userData.name);
-        if (userData.role === 'admin') {
-          setUser(userData);
-          setView("admin-dashboard");
-        } else {
-          setEditBirthState(userData.birth_state || "");
-          setEditNationality(userData.nationality || "");
-          setEditGender(userData.gender || "");
-          setEditMaritalStatus(userData.marital_status || "");
-          setEditShortName(userData.short_name || "");
-          setEditPhotoUrl(userData.photo_url || "");
-          setIsSimulatingLoading(true);
-          
-          setTimeout(() => {
-            setUser(userData);
-            if (userData.regularity && userData.regularity !== 'Regular') {
-              setView("financial");
-              setError("Sua conta possui pendências. Por favor, regularize sua situação financeira para acessar o portal completo.");
-            } else {
-              setView("dashboard");
-            }
-            fetchStudentData(userData.id);
-            setIsSimulatingLoading(false);
-          }, 3000);
-        }
-      } else {
-        console.warn("Login falhou: Credenciais incorretas.");
-        setError("Matrícula ou senha incorretos.");
-      }
-    } catch (err: any) {
-      console.error("Erro inesperado no handleLogin:", err);
-      setError("Erro ao conectar com o servidor.");
-      setDebugInfo(err.message || JSON.stringify(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const testConnection = async () => {
-    setLoading(true);
-    setDebugInfo("Testando conexão...");
-    try {
-      const { data, error, count } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
-        
-      if (error) {
-        setDebugInfo(`Erro de Conexão: ${error.message}\nDetalhes: ${error.details}\nDica: ${error.hint}\nCódigo: ${error.code}`);
-      } else {
-        setDebugInfo(`Conexão OK!\nTotal de usuários no banco: ${count}\nURL: ${import.meta.env.VITE_SUPABASE_URL}`);
-      }
-    } catch (err: any) {
-      setDebugInfo(`Erro Crítico: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchStudentData = async (id: number) => {
-    const dashboardData = await db.getStudentDashboard(id);
-    
-    // Auto-generate data if grades are empty
-    if (dashboardData.grades.length === 0) {
-      setLoading(true);
-      try {
-        await db.generateStudentFictionalData(id);
-        const updatedData = await db.getStudentDashboard(id);
-        setData(updatedData);
-      } catch (error) {
-        console.error("Erro ao gerar dados automáticos:", error);
-        setData(dashboardData);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setData(dashboardData);
-    }
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    setView("login");
-    setMatricula("");
-    setPassword("");
-  };
-
-  useEffect(() => {
-    if (showToast) {
-      const timer = setTimeout(() => setShowToast(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showToast]);
 
   // Views
   const renderView = () => {
@@ -3278,10 +3349,59 @@ export default function App() {
           </motion.div>
         )}
         
-        <ForgotRecoveryModal />
-        <SignUpModal />
+        <ForgotRecoveryModal 
+          isOpen={showForgotModal}
+          onClose={resetForgotFlow}
+          step={forgotStep}
+          setStep={setForgotStep}
+          type={forgotType}
+          setType={setForgotType}
+          email={forgotEmail}
+          setEmail={setForgotEmail}
+          result={forgotResult}
+          isLoading={isForgotLoading}
+          onAction={handleForgotAction}
+        />
+        <SignUpModal 
+          isOpen={showSignUpModal}
+          onClose={() => { setShowSignUpModal(false); setSignUpSuccessMatricula(null); }}
+          successMatricula={signUpSuccessMatricula}
+          isLoading={isSignUpLoading}
+          onSubmit={handleSignUp}
+          name={signUpName}
+          setName={setSignUpName}
+          email={signUpEmail}
+          setEmail={setSignUpEmail}
+          password={signUpPassword}
+          setPassword={setSignUpPassword}
+          confirmPassword={signUpConfirmPassword}
+          setConfirmPassword={setSignUpConfirmPassword}
+          birthDate={signUpBirthDate}
+          setBirthDate={setSignUpBirthDate}
+          cpf={signUpCPF}
+          setCPF={setSignUpCPF}
+          address={signUpAddress}
+          setAddress={setSignUpAddress}
+          city={signUpCity}
+          setCity={setSignUpCity}
+          cep={signUpCEP}
+          setCEP={setSignUpCEP}
+          course={signUpCourse}
+          setCourse={setSignUpCourse}
+        />
       </AnimatePresence>
       {renderView()}
     </div>
-  );
+    );
+  } catch (err: any) {
+    console.error("CRITICAL ERROR in App component:", err);
+    return (
+      <div style={{ padding: '20px', color: 'red', backgroundColor: 'white', minHeight: '100vh', overflow: 'auto' }}>
+        <h1>Critical Error in App Component</h1>
+        <p><strong>Message:</strong> {err.message || "An unknown error occurred during App initialization."}</p>
+        <pre style={{ backgroundColor: '#f5f5f5', padding: '10px', borderRadius: '5px' }}>{err.stack}</pre>
+        <button onClick={() => window.location.reload()} style={{ padding: '10px 20px', background: '#00a2b1', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Reload Page</button>
+      </div>
+    );
+  }
 }
