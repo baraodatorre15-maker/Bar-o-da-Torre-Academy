@@ -1565,7 +1565,7 @@ export default function App() {
             return { 
               ...n, 
               title: "Bolsa de Estudo para Intercâmbio",
-              image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=1000" 
+              image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1000" 
             };
           }
           // Fix for "Simpósio de Farmácia e Medicina"
@@ -1573,7 +1573,7 @@ export default function App() {
             return { 
               ...n, 
               title: "Simpósio de Farmácia e Medicina",
-              image: "https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&q=80&w=1000" 
+              image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=1000" 
             };
           }
           // General fix for broken Unsplash IDs if any others exist
@@ -1887,7 +1887,7 @@ export default function App() {
           />
         </div>
         <div className="flex justify-between items-center relative z-10">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center p-2 shadow-lg">
+          <div className="w-18 h-18 bg-white rounded-full flex items-center justify-center p-2 shadow-lg">
             <img src={appSettings?.logo_url || "https://cdn-icons-png.flaticon.com/512/3135/3135810.png"} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
           </div>
           <div className="flex items-center gap-3">

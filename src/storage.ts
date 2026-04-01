@@ -242,7 +242,7 @@ export const initialData = {
       id: 7,
       title: "Bolsa de Estudo para Intercâmbio",
       description: "A Barão da Torre anuncia novas parcerias com universidades europeias para programas de intercâmbio em 2026.",
-      image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=1000"
+      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1000"
     },
     {
       id: 8,
@@ -409,7 +409,7 @@ export const getDB = () => {
       { old: /Faculdade Barão de Mauá/gi, new: "Barão da Torre Academy" },
       { old: /Centro Universitário Barão de Mauá/gi, new: "Barão da Torre Academy" },
       { old: /Faculdade Barão da Torre/gi, new: "Barão da Torre Academy" },
-      { old: /Barão da Torre/gi, new: "Barão da Torre Academy" },
+      { old: /Barão da Torre(?! Academy)/gi, new: "Barão da Torre Academy" },
       { old: /baraodemaua\.br/gi, new: "baraodatorre.br" }
     ];
     
