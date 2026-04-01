@@ -104,21 +104,18 @@ const LoginView = ({ appSettings, handleLogin, matricula, setMatricula, password
         className="relative z-10 w-full max-w-sm px-8 flex flex-col items-center"
       >
         {/* Logo Section */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-white p-1.5 rounded-lg shadow-lg">
+        <div className="flex flex-col items-center gap-6 mb-10">
+          <div className="w-24 h-24 bg-white p-3 rounded-3xl shadow-2xl">
             <img src={appSettings?.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">{getCollegeName(appSettings)}</h1>
-        </div>
-
-        {/* Avatar Icon */}
-        <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 border border-white/30">
-          <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
-            <UserIcon className="w-10 h-10 text-slate-400" />
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-black text-white tracking-tight uppercase leading-tight">
+              {getCollegeName(appSettings)}
+            </h1>
+            <div className="h-px w-12 bg-white/30 mx-auto my-2" />
+            <h2 className="text-sm font-bold text-white/80 uppercase tracking-[0.4em]">Bem-vindo</h2>
           </div>
         </div>
-
-        <h2 className="text-2xl font-medium text-white mb-8">Bem-vindo</h2>
 
         <form onSubmit={handleLogin} className="w-full space-y-4">
           {/* Matricula Input */}
@@ -2999,7 +2996,8 @@ export default function App() {
           try {
             const urlParts = user.photo_url.split('/student-photos/');
             if (urlParts.length > 1) {
-              const oldPath = urlParts[1];
+              // Strip query parameters if present (e.g., ?t=...)
+              const oldPath = urlParts[1].split('?')[0];
               await db.deleteFile('student-photos', oldPath);
             }
           } catch (deleteErr) {
@@ -3009,7 +3007,8 @@ export default function App() {
 
         // Upload to Supabase Storage
         const fileExt = selectedPhotoFile.name.split('.').pop();
-        const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+        // Using a deterministic filename to avoid multiplying files
+        const fileName = `${user.id}.${fileExt}`;
         const filePath = `avatars/${fileName}`;
         
         try {

@@ -2,6 +2,18 @@ import { supabase } from '../lib/supabase';
 import { User, DashboardData, AppSettings, Activity, Grade, Schedule, NewsItem, Announcement, Payment, Exam, OnlineClass } from '../types';
 import { generateTuitionPayments, generateRandomGrades } from '../storage';
 
+const dataURLtoFile = (dataurl: string, filename: string) => {
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+};
+
 /**
  * This service acts as a facade for the database operations.
  * It uses Supabase for all operations.
@@ -65,9 +77,12 @@ export const dbService = {
   },
 
   addStudent: async (student: any): Promise<User> => {
+    const { photo_url, enrollment_proof_url, ...rest } = student;
+    
+    // 1. Insert student first to get ID
     const { data, error } = await supabase
       .from('users')
-      .insert([student])
+      .insert([rest])
       .select()
       .single();
 
@@ -75,13 +90,124 @@ export const dbService = {
       console.error('Add student error:', error);
       throw error;
     }
-    return data as User;
+
+    const newStudent = data as User;
+    let finalPhotoUrl = photo_url;
+    let finalProofUrl = enrollment_proof_url;
+    let finalProofUrls = student.enrollment_proof_urls;
+
+    // 2. Handle photo upload if it's a data URL
+    if (photo_url && photo_url.startsWith('data:')) {
+      try {
+        const fileExt = photo_url.split(';')[0].split('/')[1];
+        const file = dataURLtoFile(photo_url, `${newStudent.id}.${fileExt}`);
+        finalPhotoUrl = await dbService.uploadFile('student-photos', `avatars/${newStudent.id}.${fileExt}`, file);
+      } catch (uploadError) {
+        console.error('Error uploading photo in addStudent:', uploadError);
+      }
+    }
+
+    // 3. Handle enrollment proof upload if it's a data URL
+    if (enrollment_proof_url && enrollment_proof_url.startsWith('data:')) {
+      try {
+        const fileExt = enrollment_proof_url.split(';')[0].split('/')[1];
+        const file = dataURLtoFile(enrollment_proof_url, `proof_${newStudent.id}.${fileExt}`);
+        finalProofUrl = await dbService.uploadFile('student-photos', `proofs/${newStudent.id}.${fileExt}`, file);
+      } catch (uploadError) {
+        console.error('Error uploading proof in addStudent:', uploadError);
+      }
+    }
+
+    // 4. Handle enrollment proof urls map if it exists
+    if (student.enrollment_proof_urls) {
+      finalProofUrls = { ...student.enrollment_proof_urls };
+      for (const themeId in finalProofUrls) {
+        const url = finalProofUrls[themeId];
+        if (url && url.startsWith('data:')) {
+          try {
+            const fileExt = url.split(';')[0].split('/')[1];
+            const file = dataURLtoFile(url, `proof_${newStudent.id}_${themeId}.${fileExt}`);
+            finalProofUrls[themeId] = await dbService.uploadFile('student-photos', `proofs/${newStudent.id}_${themeId}.${fileExt}`, file);
+          } catch (uploadError) {
+            console.error(`Error uploading proof for theme ${themeId} in addStudent:`, uploadError);
+          }
+        }
+      }
+    }
+
+    // 5. Update student with final URLs if they changed
+    if (finalPhotoUrl !== photo_url || finalProofUrl !== enrollment_proof_url || finalProofUrls !== student.enrollment_proof_urls) {
+      const { data: updatedData, error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          photo_url: finalPhotoUrl, 
+          enrollment_proof_url: finalProofUrl,
+          enrollment_proof_urls: finalProofUrls
+        })
+        .eq('id', newStudent.id)
+        .select()
+        .single();
+      
+      if (!updateError) return updatedData as User;
+    }
+
+    return newStudent;
   },
 
   updateStudent: async (id: number, updatedData: any): Promise<User> => {
+    let finalPhotoUrl = updatedData.photo_url;
+    let finalProofUrl = updatedData.enrollment_proof_url;
+    let finalProofUrls = updatedData.enrollment_proof_urls;
+
+    // 1. Handle photo upload if it's a data URL
+    if (updatedData.photo_url && updatedData.photo_url.startsWith('data:')) {
+      try {
+        const fileExt = updatedData.photo_url.split(';')[0].split('/')[1];
+        const file = dataURLtoFile(updatedData.photo_url, `${id}.${fileExt}`);
+        finalPhotoUrl = await dbService.uploadFile('student-photos', `avatars/${id}.${fileExt}`, file);
+      } catch (uploadError) {
+        console.error('Error uploading photo in updateStudent:', uploadError);
+      }
+    }
+
+    // 2. Handle enrollment proof upload if it's a data URL
+    if (updatedData.enrollment_proof_url && updatedData.enrollment_proof_url.startsWith('data:')) {
+      try {
+        const fileExt = updatedData.enrollment_proof_url.split(';')[0].split('/')[1];
+        const file = dataURLtoFile(updatedData.enrollment_proof_url, `proof_${id}.${fileExt}`);
+        finalProofUrl = await dbService.uploadFile('student-photos', `proofs/${id}.${fileExt}`, file);
+      } catch (uploadError) {
+        console.error('Error uploading proof in updateStudent:', uploadError);
+      }
+    }
+
+    // 3. Handle enrollment proof urls map if it exists
+    if (updatedData.enrollment_proof_urls) {
+      finalProofUrls = { ...updatedData.enrollment_proof_urls };
+      for (const themeId in finalProofUrls) {
+        const url = finalProofUrls[themeId];
+        if (url && url.startsWith('data:')) {
+          try {
+            const fileExt = url.split(';')[0].split('/')[1];
+            const file = dataURLtoFile(url, `proof_${id}_${themeId}.${fileExt}`);
+            finalProofUrls[themeId] = await dbService.uploadFile('student-photos', `proofs/${id}_${themeId}.${fileExt}`, file);
+          } catch (uploadError) {
+            console.error(`Error uploading proof for theme ${themeId} in updateStudent:`, uploadError);
+          }
+        }
+      }
+    }
+
+    const dataToUpdate = { 
+      ...updatedData, 
+      photo_url: finalPhotoUrl,
+      enrollment_proof_url: finalProofUrl,
+      enrollment_proof_urls: finalProofUrls
+    };
+
     const { data, error } = await supabase
       .from('users')
-      .update(updatedData)
+      .update(dataToUpdate)
       .eq('id', id)
       .select()
       .single();
