@@ -1447,6 +1447,10 @@ export default function App() {
       }
     }, [showToast]);
 
+    useEffect(() => {
+      window.scrollTo(0, 0);
+    }, [view]);
+
     const [isSimulatingLoading, setIsSimulatingLoading] = useState(false);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editBirthState, setEditBirthState] = useState("");
@@ -1477,6 +1481,7 @@ export default function App() {
       setIsDashboardLoading(true);
       setTimeout(() => {
         setView(newView);
+        window.scrollTo(0, 0);
         setIsDashboardLoading(false);
       }, 1200);
     };
