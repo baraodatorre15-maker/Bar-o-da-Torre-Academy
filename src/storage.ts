@@ -169,30 +169,32 @@ export const initialData = {
     { id: 12, discipline_id: 12, discipline_name: "Marketing Digital", date: "2026-04-26", time: "14:00", type: "B1" }
   ],
   online_classes: [
-    { id: 1, discipline_id: 1, discipline_name: "Cálculo I", link: "https://meet.google.com/aaa-bbbb-ccc", day_of_week: "Segunda-feira", time: "08:00", mandatory: true },
-    { id: 2, discipline_id: 2, discipline_name: "Programação Web", link: "https://meet.google.com/abc-defg-hij", day_of_week: "Terça-feira", time: "10:00", mandatory: true },
-    { id: 3, discipline_id: 3, discipline_name: "Estrutura de Dados", link: "https://meet.google.com/ddd-eeee-fff", day_of_week: "Quarta-feira", time: "08:00", mandatory: true },
-    { id: 4, discipline_id: 4, discipline_name: "Química Orgânica", link: "https://meet.google.com/ggg-hhhh-iii", day_of_week: "Quinta-feira", time: "08:00", mandatory: true },
-    { id: 5, discipline_id: 5, discipline_name: "Anatomia Humana", link: "https://meet.google.com/jjj-kkkk-lll", day_of_week: "Sexta-feira", time: "10:00", mandatory: true },
-    { id: 6, discipline_id: 6, discipline_name: "Bioquímica Clínica", link: "https://meet.google.com/mmm-nnnn-ooo", day_of_week: "Segunda-feira", time: "14:00", mandatory: true },
-    { id: 7, discipline_id: 7, discipline_name: "Farmacologia I", link: "https://meet.google.com/ppp-qqqq-rrr", day_of_week: "Quarta-feira", time: "10:00", mandatory: true },
-    { id: 8, discipline_id: 8, discipline_name: "Direito Civil", link: "https://meet.google.com/sss-tttt-uuu", day_of_week: "Terça-feira", time: "19:00", mandatory: true },
-    { id: 9, discipline_id: 9, discipline_name: "Gestão Estratégica", link: "https://meet.google.com/mno-pqrs-tuv", day_of_week: "Quinta-feira", time: "19:00", mandatory: true },
-    { id: 10, discipline_id: 10, discipline_name: "Psicologia Social", link: "https://meet.google.com/vvv-wwww-xxx", day_of_week: "Segunda-feira", time: "08:00", mandatory: true },
-    { id: 11, discipline_id: 11, discipline_name: "Sistemas Operacionais", link: "https://meet.google.com/yyy-zzzz-aaa", day_of_week: "Sexta-feira", time: "08:00", mandatory: true },
-    { id: 12, discipline_id: 12, discipline_name: "Marketing Digital", link: "https://meet.google.com/xyz-uvwx-yz", day_of_week: "Terça-feira", time: "14:00", mandatory: true },
-    // Additional Fictional Classes
-    { id: 13, discipline_id: 1, discipline_name: "Cálculo I - Monitoria", link: "https://meet.google.com/mon-calc-1", day_of_week: "Sábado", time: "09:00", mandatory: false },
-    { id: 14, discipline_id: 2, discipline_name: "Programação Web - Lab Extra", link: "https://meet.google.com/lab-web-extra", day_of_week: "Sábado", time: "14:00", mandatory: false },
-    { id: 15, discipline_id: 11, discipline_name: "Sistemas Operacionais - Revisão", link: "https://meet.google.com/so-rev-1", day_of_week: "Domingo", time: "10:00", mandatory: false },
-    { id: 16, discipline_id: 8, discipline_name: "Direito Civil - Prática Jurídica", link: "https://meet.google.com/dir-civ-prac", day_of_week: "Sábado", time: "10:00", mandatory: true },
-    { id: 17, discipline_id: 9, discipline_name: "Gestão Estratégica - Case Study", link: "https://meet.google.com/gest-case-1", day_of_week: "Sábado", time: "11:00", mandatory: true },
-    { id: 18, discipline_id: 4, discipline_name: "Química Orgânica - Grupo de Estudos", link: "https://meet.google.com/qui-est-1", day_of_week: "Sábado", time: "13:00", mandatory: false },
-    { id: 19, discipline_id: 5, discipline_name: "Anatomia Humana - Atlas Digital", link: "https://meet.google.com/anat-atl-1", day_of_week: "Sábado", time: "15:00", mandatory: false },
-    { id: 20, discipline_id: 6, discipline_name: "Bioquímica Clínica - Discussão de Casos", link: "https://meet.google.com/bioq-cas-1", day_of_week: "Domingo", time: "14:00", mandatory: false },
-    { id: 21, discipline_id: 7, discipline_name: "Farmacologia I - Plantão de Dúvidas", link: "https://meet.google.com/farm-plan-1", day_of_week: "Sábado", time: "16:00", mandatory: false },
-    { id: 22, discipline_id: 10, discipline_name: "Psicologia Social - Debate Aberto", link: "https://meet.google.com/psic-deb-1", day_of_week: "Domingo", time: "16:00", mandatory: false },
-    { id: 23, discipline_id: 12, discipline_name: "Marketing Digital - Oficina de Tráfego", link: "https://meet.google.com/mark-traf-1", day_of_week: "Sábado", time: "17:00", mandatory: false }
+    { id: 1, discipline_id: 1, discipline_name: "Cálculo I", course: "Engenharia de Software", link: "https://meet.google.com/aaa-bbbb-ccc", date: "2026-04-01", day_of_week: "Quarta-feira", time: "08:00", mandatory: true },
+    { id: 2, discipline_id: 2, discipline_name: "Programação Web", course: "Engenharia de Software", link: "https://meet.google.com/abc-defg-hij", date: "2026-04-02", day_of_week: "Quinta-feira", time: "10:00", mandatory: true },
+    { id: 3, discipline_id: 3, discipline_name: "Estrutura de Dados", course: "Engenharia de Software", link: "https://meet.google.com/ddd-eeee-fff", date: "2026-04-03", day_of_week: "Sexta-feira", time: "08:00", mandatory: true },
+    { id: 4, discipline_id: 4, discipline_name: "Química Orgânica", course: "Farmácia", link: "https://meet.google.com/ggg-hhhh-iii", date: "2026-04-01", day_of_week: "Quarta-feira", time: "08:00", mandatory: true },
+    { id: 5, discipline_id: 5, discipline_name: "Anatomia Humana", course: "Enfermagem", link: "https://meet.google.com/jjj-kkkk-lll", date: "2026-04-02", day_of_week: "Quinta-feira", time: "10:00", mandatory: true },
+    { id: 24, discipline_id: 4, discipline_name: "Farmacotécnica", course: "Farmácia", link: "https://meet.google.com/far-tec-1", date: "2026-04-02", day_of_week: "Quinta-feira", time: "19:00", mandatory: true },
+    { id: 6, discipline_id: 6, discipline_name: "Bioquímica Clínica", course: "Farmácia", link: "https://meet.google.com/mmm-nnnn-ooo", date: "2026-04-03", day_of_week: "Sexta-feira", time: "14:00", mandatory: true },
+    { id: 7, discipline_id: 7, discipline_name: "Farmacologia I", course: "Farmácia", link: "https://meet.google.com/ppp-qqqq-rrr", date: "2026-04-06", day_of_week: "Segunda-feira", time: "10:00", mandatory: true },
+    { id: 25, discipline_id: 6, discipline_name: "Toxicologia", course: "Farmácia", link: "https://meet.google.com/tox-1", date: "2026-04-07", day_of_week: "Terça-feira", time: "08:00", mandatory: true },
+    { id: 8, discipline_id: 8, discipline_name: "Direito Civil", course: "Direito", link: "https://meet.google.com/sss-tttt-uuu", date: "2026-04-01", day_of_week: "Quarta-feira", time: "19:00", mandatory: true },
+    { id: 9, discipline_id: 9, discipline_name: "Gestão Estratégica", course: "Administração", link: "https://meet.google.com/mno-pqrs-tuv", date: "2026-04-02", day_of_week: "Quinta-feira", time: "19:00", mandatory: true },
+    { id: 10, discipline_id: 10, discipline_name: "Psicologia Social", course: "Psicologia", link: "https://meet.google.com/vvv-wwww-xxx", date: "2026-04-03", day_of_week: "Sexta-feira", time: "08:00", mandatory: true },
+    { id: 11, discipline_id: 11, discipline_name: "Sistemas Operacionais", course: "Engenharia de Software", link: "https://meet.google.com/yyy-zzzz-aaa", date: "2026-04-06", day_of_week: "Segunda-feira", time: "08:00", mandatory: true },
+    { id: 12, discipline_id: 12, discipline_name: "Marketing Digital", course: "Marketing", link: "https://meet.google.com/xyz-uvwx-yz", date: "2026-04-01", day_of_week: "Quarta-feira", time: "14:00", mandatory: true },
+    // Future classes (outside 1 week)
+    { id: 13, discipline_id: 1, discipline_name: "Cálculo I - Monitoria", course: "Engenharia de Software", link: "https://meet.google.com/mon-calc-1", date: "2026-04-10", day_of_week: "Sexta-feira", time: "09:00", mandatory: false },
+    { id: 14, discipline_id: 2, discipline_name: "Programação Web - Lab Extra", course: "Engenharia de Software", link: "https://meet.google.com/lab-web-extra", date: "2026-04-11", day_of_week: "Sábado", time: "14:00", mandatory: false },
+    { id: 15, discipline_id: 11, discipline_name: "Sistemas Operacionais - Revisão", course: "Engenharia de Software", link: "https://meet.google.com/so-rev-1", date: "2026-04-12", day_of_week: "Domingo", time: "10:00", mandatory: false },
+    { id: 16, discipline_id: 8, discipline_name: "Direito Civil - Prática Jurídica", course: "Direito", link: "https://meet.google.com/dir-civ-prac", date: "2026-04-11", day_of_week: "Sábado", time: "10:00", mandatory: true },
+    { id: 17, discipline_id: 9, discipline_name: "Gestão Estratégica - Case Study", course: "Administração", link: "https://meet.google.com/gest-case-1", date: "2026-04-11", day_of_week: "Sábado", time: "11:00", mandatory: true },
+    { id: 18, discipline_id: 4, discipline_name: "Química Orgânica - Grupo de Estudos", course: "Farmácia", link: "https://meet.google.com/qui-est-1", date: "2026-04-11", day_of_week: "Sábado", time: "13:00", mandatory: false },
+    { id: 19, discipline_id: 5, discipline_name: "Anatomia Humana - Atlas Digital", course: "Enfermagem", link: "https://meet.google.com/anat-atl-1", date: "2026-04-11", day_of_week: "Sábado", time: "15:00", mandatory: false },
+    { id: 20, discipline_id: 6, discipline_name: "Bioquímica Clínica - Discussão de Casos", course: "Farmácia", link: "https://meet.google.com/bioq-cas-1", date: "2026-04-12", day_of_week: "Domingo", time: "14:00", mandatory: false },
+    { id: 21, discipline_id: 7, discipline_name: "Farmacologia I - Plantão de Dúvidas", course: "Farmácia", link: "https://meet.google.com/farm-plan-1", date: "2026-04-11", day_of_week: "Sábado", time: "16:00", mandatory: false },
+    { id: 22, discipline_id: 10, discipline_name: "Psicologia Social - Debate Aberto", course: "Psicologia", link: "https://meet.google.com/psic-deb-1", date: "2026-04-12", day_of_week: "Domingo", time: "16:00", mandatory: false },
+    { id: 23, discipline_id: 12, discipline_name: "Marketing Digital - Oficina de Tráfego", course: "Marketing", link: "https://meet.google.com/mark-traf-1", date: "2026-04-11", day_of_week: "Sábado", time: "17:00", mandatory: false }
   ],
   appSettings: {
     logo_url: "https://cdn-icons-png.flaticon.com/512/3135/3135810.png",
@@ -707,6 +709,34 @@ export const db = {
     }
     
     return user;
+  },
+  // Online Classes
+  getOnlineClasses: async () => {
+    const database = getDB();
+    return database.online_classes || [];
+  },
+  addOnlineClass: async (onlineClass: any) => {
+    const database = getDB();
+    if (!database.online_classes) database.online_classes = [];
+    const newClass = { ...onlineClass, id: Date.now() };
+    database.online_classes.push(newClass);
+    saveDB(database);
+    return newClass;
+  },
+  updateOnlineClass: async (id: number, onlineClass: any) => {
+    const database = getDB();
+    const index = database.online_classes.findIndex((c: any) => c.id === id);
+    if (index !== -1) {
+      database.online_classes[index] = { ...database.online_classes[index], ...onlineClass };
+      saveDB(database);
+      return database.online_classes[index];
+    }
+    throw new Error("Aula não encontrada");
+  },
+  deleteOnlineClass: async (id: number) => {
+    const database = getDB();
+    database.online_classes = (database.online_classes || []).filter((c: any) => c.id !== id);
+    saveDB(database);
   },
   getStudentDashboard: (studentId: number) => {
     const database = getDB();

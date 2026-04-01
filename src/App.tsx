@@ -49,7 +49,9 @@ import {
   Link,
   RefreshCw,
   X,
-  UserPlus
+  UserPlus,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
@@ -237,9 +239,20 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
   const [payments, setPayments] = useState<Payment[]>([]);
   const [activeTab, setActiveTab] = useState("students");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showOnlineClassModal, setShowOnlineClassModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<User | null>(null);
+  const [editingOnlineClass, setEditingOnlineClass] = useState<OnlineClass | null>(null);
+  const [onlineClasses, setOnlineClasses] = useState<OnlineClass[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [generatingData, setGeneratingData] = useState(false);
+
+  // Online Class Form State
+  const [ocDisciplineName, setOcDisciplineName] = useState("");
+  const [ocCourse, setOcCourse] = useState("");
+  const [ocLink, setOcLink] = useState("");
+  const [ocDate, setOcDate] = useState("");
+  const [ocTime, setOcTime] = useState("");
+  const [ocMandatory, setOcMandatory] = useState(true);
   
   const handleToggleStatus = async (student: User) => {
     try {
@@ -290,10 +303,76 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
     setPayments(paymentsData);
   };
 
+  const fetchOnlineClasses = async () => {
+    const data = await db.getOnlineClasses();
+    setOnlineClasses(data);
+  };
+
   useEffect(() => {
     fetchStudents();
     fetchPayments();
+    fetchOnlineClasses();
   }, []);
+
+  const handleOpenEditOnlineClass = (oc: OnlineClass) => {
+    setEditingOnlineClass(oc);
+    setOcDisciplineName(oc.discipline_name);
+    setOcCourse(oc.course);
+    setOcLink(oc.link);
+    setOcDate(oc.date);
+    setOcTime(oc.time);
+    setOcMandatory(oc.mandatory);
+    setShowOnlineClassModal(true);
+  };
+
+  const handleCloseOnlineClassModal = () => {
+    setShowOnlineClassModal(false);
+    setEditingOnlineClass(null);
+    setOcDisciplineName("");
+    setOcCourse("");
+    setOcLink("");
+    setOcDate("");
+    setOcTime("");
+    setOcMandatory(true);
+  };
+
+  const handleSaveOnlineClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const ocData = {
+        discipline_name: ocDisciplineName,
+        course: ocCourse,
+        link: ocLink,
+        date: ocDate,
+        time: ocTime,
+        mandatory: ocMandatory,
+        discipline_id: 1 // Placeholder
+      };
+
+      if (editingOnlineClass) {
+        await db.updateOnlineClass(editingOnlineClass.id, ocData);
+      } else {
+        await db.addOnlineClass(ocData);
+      }
+      handleCloseOnlineClassModal();
+      fetchOnlineClasses();
+      alert("Aula online salva com sucesso!");
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar aula online.");
+    }
+  };
+
+  const handleDeleteOnlineClass = async (id: number) => {
+    if (window.confirm("Tem certeza que deseja excluir esta aula?")) {
+      try {
+        await db.deleteOnlineClass(id);
+        fetchOnlineClasses();
+      } catch (err) {
+        alert("Erro ao excluir aula.");
+      }
+    }
+  };
 
   const handleOpenEdit = (student: User) => {
     setEditingStudent(student);
@@ -454,6 +533,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
 
         <nav className="space-y-2 flex-1">
           <AdminNavItem icon={<Users />} label="Alunos" active={activeTab === "students"} onClick={() => setActiveTab("students")} />
+          <AdminNavItem icon={<MonitorPlay />} label="Aulas Online" active={activeTab === "online-classes"} onClick={() => setActiveTab("online-classes")} />
           <AdminNavItem icon={<BookOpen />} label="Disciplinas" active={activeTab === "disciplines"} onClick={() => setActiveTab("disciplines")} />
           <AdminNavItem icon={<Bell />} label="Comunicados" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} />
           <AdminNavItem icon={<DollarSign />} label="Financeiro" active={activeTab === "financial"} onClick={() => setActiveTab("financial")} />
@@ -470,28 +550,39 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold text-slate-900">
             {activeTab === "students" ? "Gerenciamento de Alunos" : 
+             activeTab === "online-classes" ? "Aulas Online EAD" :
              activeTab === "disciplines" ? "Disciplinas" :
              activeTab === "announcements" ? "Comunicados" : 
              activeTab === "settings" ? "Configurações" : "Financeiro"}
           </h2>
           <div className="flex items-center gap-4">
-            {(activeTab === "students" || activeTab === "financial") && (
+            {(activeTab === "students" || activeTab === "financial" || activeTab === "online-classes") && (
               <>
-                <button 
-                  onClick={handleGenerateFictionalData}
-                  disabled={generatingData}
-                  className="flex items-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors border-2 disabled:opacity-50 bg-white text-[#00a2b1] border-[#00a2b1] hover:bg-[#00a2b1]/5"
-                  title="Gerar notas e boletos para alunos sem dados"
-                >
-                  {generatingData ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
-                  <span>{generatingData ? "Gerando..." : "Gerar Dados"}</span>
-                </button>
+                {activeTab !== "online-classes" && (
+                  <button 
+                    onClick={handleGenerateFictionalData}
+                    disabled={generatingData}
+                    className="flex items-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors border-2 disabled:opacity-50 bg-white text-[#00a2b1] border-[#00a2b1] hover:bg-[#00a2b1]/5"
+                    title="Gerar notas e boletos para alunos sem dados"
+                  >
+                    {generatingData ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
+                    <span>{generatingData ? "Gerando..." : "Gerar Dados"}</span>
+                  </button>
+                )}
                 {activeTab === "students" && (
                   <button 
                     onClick={() => setShowAddModal(true)}
                     className="flex items-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors bg-[#00a2b1] text-white hover:bg-[#008f9d]"
                   >
                     <Plus className="w-5 h-5" /> Novo Aluno
+                  </button>
+                )}
+                {activeTab === "online-classes" && (
+                  <button 
+                    onClick={() => setShowOnlineClassModal(true)}
+                    className="flex items-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors bg-[#00a2b1] text-white hover:bg-[#008f9d]"
+                  >
+                    <Plus className="w-5 h-5" /> Nova Aula
                   </button>
                 )}
               </>
@@ -585,7 +676,65 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
             </table>
           </div>
         </div>
-      ) : activeTab === "settings" ? (
+        ) : activeTab === "online-classes" ? (
+          <div className="space-y-6">
+            <div className="card p-0 overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="border-b bg-[#00a2b1] text-white border-[#00a2b1]">
+                  <tr>
+                    <th className="p-4 text-xs font-bold uppercase">Disciplina</th>
+                    <th className="p-4 text-xs font-bold uppercase">Curso</th>
+                    <th className="p-4 text-xs font-bold uppercase">Data/Hora</th>
+                    <th className="p-4 text-xs font-bold uppercase">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {onlineClasses.map((oc, index) => (
+                    <tr key={`admin-oc-${oc.id || index}`} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-700">{oc.discipline_name}</span>
+                          <span className="text-[10px] text-slate-400 truncate max-w-[200px]">{oc.link}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold uppercase">
+                          {oc.course}
+                        </span>
+                      </td>
+                      <td className="p-4 text-sm text-slate-600">
+                        {oc.date} às {oc.time}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleOpenEditOnlineClass(oc)}
+                            className="p-2 text-[#00a2b1] hover:bg-[#00a2b1]/10 rounded-lg transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteOnlineClass(oc.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {onlineClasses.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="p-12 text-center text-slate-400">
+                        Nenhuma aula online cadastrada.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : activeTab === "settings" ? (
           <div className="max-w-2xl space-y-8">
             <div className="card space-y-6">
               <h3 className="text-xl font-bold text-slate-900">Configurações do Aplicativo</h3>
@@ -952,6 +1101,78 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                   </button>
                   <button type="submit" className="flex-1 btn-primary py-3">
                     {editingStudent ? "Salvar Alterações" : "Cadastrar"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add/Edit Online Class Modal */}
+      <AnimatePresence>
+        {showOnlineClassModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={handleCloseOnlineClassModal}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <h3 className="text-2xl font-bold text-slate-900 mb-6">
+                {editingOnlineClass ? "Editar Aula Online" : "Nova Aula Online"}
+              </h3>
+              
+              <form onSubmit={handleSaveOnlineClass} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Nome da Disciplina</label>
+                  <input type="text" className="input-field" value={ocDisciplineName} onChange={e => setOcDisciplineName(e.target.value)} required />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Curso</label>
+                  <select className="input-field" value={ocCourse} onChange={e => setOcCourse(e.target.value)} required>
+                    <option value="">Selecione um curso</option>
+                    {COURSES.map((c, i) => <option key={`oc-course-opt-${c}-${i}`} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Link da Aula (Google Meet/Zoom)</label>
+                  <input type="url" className="input-field" value={ocLink} onChange={e => setOcLink(e.target.value)} placeholder="https://meet.google.com/..." required />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Data</label>
+                    <input type="date" className="input-field" value={ocDate} onChange={e => setOcDate(e.target.value)} required />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Hora</label>
+                    <input type="time" className="input-field" value={ocTime} onChange={e => setOcTime(e.target.value)} required />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 py-2">
+                  <input 
+                    type="checkbox" 
+                    id="ocMandatory" 
+                    checked={ocMandatory} 
+                    onChange={e => setOcMandatory(e.target.checked)}
+                    className="w-4 h-4 text-[#00a2b1] rounded focus:ring-[#00a2b1]"
+                  />
+                  <label htmlFor="ocMandatory" className="text-sm font-bold text-slate-700">Aula Obrigatória</label>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button type="button" onClick={handleCloseOnlineClassModal} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition-colors">
+                    Cancelar
+                  </button>
+                  <button type="submit" className="flex-1 btn-primary py-3">
+                    {editingOnlineClass ? "Salvar Alterações" : "Cadastrar Aula"}
                   </button>
                 </div>
               </form>
@@ -1545,7 +1766,26 @@ export default function App() {
     };
 
     const fetchStudentData = async (id: number) => {
-      let dashboardData = await db.getStudentDashboard(id);
+      let dashboardData = null;
+      let attempt = 0;
+      const maxRetries = 3;
+
+      while (attempt < maxRetries) {
+        try {
+          attempt++;
+          dashboardData = await db.getStudentDashboard(id);
+          break;
+        } catch (error) {
+          console.error(`Erro ao buscar dados (tentativa ${attempt}):`, error);
+          if (attempt >= maxRetries) {
+            setError("Erro ao carregar dados do portal. Verifique sua conexão.");
+            return;
+          }
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      if (!dashboardData) return;
       
       // Auto-generate data if grades are empty
       if (dashboardData.grades.length === 0) {
@@ -1600,55 +1840,86 @@ export default function App() {
         return;
       }
 
+      if (!navigator.onLine) {
+        setError("Sem conexão com a internet. Verifique sua rede.");
+        return;
+      }
+
       setLoading(true);
       setError("");
       setDebugInfo(null);
       
-      try {
-        console.log(`Tentando login para matrícula: ${matricula} (Modo: ${isSupabaseConfigured ? "Supabase" : "Local"})`);
-        const userData = await db.login(matricula, password);
-        
-        if (userData) {
-          console.log("Login retornado pelo DB:", userData);
-          if (userData.status === 'blocked') {
-            setError("Sua conta está bloqueada. Aguarde a liberação pelo administrador.");
-            setLoading(false);
-            return;
+      const maxRetries = 3;
+      let attempt = 0;
+      let userData = null;
+      let lastError = null;
+
+      while (attempt < maxRetries) {
+        try {
+          attempt++;
+          if (attempt > 1) {
+            setError(`Conexão instável, tentando novamente (${attempt}/${maxRetries})...`);
           }
-          console.log("Login bem-sucedido para:", userData.name);
-          if (userData.role === 'admin') {
-            setUser(userData);
-            setView("admin-dashboard");
-          } else {
-            setEditBirthState(userData.birth_state || "");
-            setEditNationality(userData.nationality || "");
-            setEditGender(userData.gender || "");
-            setEditMaritalStatus(userData.marital_status || "");
-            setEditShortName(userData.short_name || "");
-            setEditPhotoUrl(userData.photo_url || "");
-            setIsSimulatingLoading(true);
-            
-            setTimeout(() => {
-              setUser(userData);
-              if (userData.regularity && userData.regularity !== 'Regular') {
-                setView("financial");
-                setError("Sua conta possui pendências. Por favor, regularize sua situação financeira para acessar o portal completo.");
-              } else {
-                setView("dashboard");
-              }
-              fetchStudentData(userData.id);
-              setIsSimulatingLoading(false);
-            }, 3000);
-          }
-        } else {
-          console.warn("Login falhou: Credenciais incorretas.");
-          setError("Matrícula ou senha incorretos.");
+          
+          console.log(`Tentativa de login ${attempt}/${maxRetries} para matrícula: ${matricula}`);
+          userData = await db.login(matricula, password);
+          lastError = null;
+          break; 
+        } catch (err: any) {
+          lastError = err;
+          console.error(`Erro na tentativa ${attempt}:`, err);
+          
+          if (attempt >= maxRetries) break;
+          
+          // Wait before next attempt
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
-      } catch (err: any) {
-        console.error("Erro inesperado no handleLogin:", err);
-        setError("Erro ao conectar com o servidor.");
-        setDebugInfo(err.message || JSON.stringify(err));
-      } finally {
+      }
+
+      if (lastError && attempt >= maxRetries) {
+        setError("Sem conexão com a internet ou servidor instável. Verifique sua rede e tente novamente.");
+        setDebugInfo(lastError.message || "Erro de conexão");
+        setLoading(false);
+        return;
+      }
+
+      if (userData) {
+        console.log("Login retornado pelo DB:", userData);
+        if (userData.status === 'blocked') {
+          setError("Sua conta está bloqueada. Aguarde a liberação pelo administrador.");
+          setLoading(false);
+          return;
+        }
+        console.log("Login bem-sucedido para:", userData.name);
+        if (userData.role === 'admin') {
+          setUser(userData);
+          setView("admin-dashboard");
+          setLoading(false);
+        } else {
+          setEditBirthState(userData.birth_state || "");
+          setEditNationality(userData.nationality || "");
+          setEditGender(userData.gender || "");
+          setEditMaritalStatus(userData.marital_status || "");
+          setEditShortName(userData.short_name || "");
+          setEditPhotoUrl(userData.photo_url || "");
+          setIsSimulatingLoading(true);
+          
+          setTimeout(() => {
+            setUser(userData);
+            if (userData.regularity && userData.regularity !== 'Regular') {
+              setView("financial");
+              setError("Sua conta possui pendências. Por favor, regularize sua situação financeira para acessar o portal completo.");
+            } else {
+              setView("dashboard");
+            }
+            fetchStudentData(userData.id);
+            setIsSimulatingLoading(false);
+            setLoading(false);
+          }, 3000);
+        }
+      } else {
+        console.warn("Login falhou: Credenciais incorretas.");
+        setError("Matrícula ou senha incorretos.");
         setLoading(false);
       }
     };
@@ -2989,49 +3260,97 @@ export default function App() {
     </div>
   );
 
-  const OnlineClassesView = () => (
-    <div className="min-h-screen bg-slate-50">
-      <ViewHeader title="Aulas Online EAD" onBack={() => navigateTo("dashboard")} />
-      <div className="p-6 space-y-4">
-        {data.online_classes.length > 0 ? (
-          data.online_classes.map((cls, index) => (
-            <div key={`online-class-row-${cls.id || index}-${index}`} className="card">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-bold text-slate-900">{cls.discipline_name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-xs text-slate-500">{cls.day_of_week} • {cls.time}</p>
-                    {cls.mandatory && (
-                      <span className="text-[8px] font-bold px-2 py-1 uppercase tracking-wider bg-[#00a2b1]/10 text-[#00a2b1] rounded-lg">
-                        Obrigatória
-                      </span>
-                    )}
+  const OnlineClassesView = () => {
+    const filteredClasses = data.online_classes
+      .filter(cls => {
+        // Strict filter by course - must match exactly
+        if (user?.course && cls.course !== user.course) return false;
+        
+        // If student has no course but class has one, also filter out for safety
+        if (!user?.course && cls.course) return false;
+
+        // Filter by date (max 1 week)
+        if (cls.date) {
+          const classDate = new Date(cls.date + 'T00:00:00');
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const oneWeekFromNow = new Date();
+          oneWeekFromNow.setDate(today.getDate() + 7);
+          oneWeekFromNow.setHours(23, 59, 59, 999);
+
+          return classDate >= today && classDate <= oneWeekFromNow;
+        }
+        return false;
+      })
+      .sort((a, b) => {
+        if (!a.date || !b.date) return 0;
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
+
+    // Group by date and take only one per day, max 5 days
+    const uniqueDays: string[] = [];
+    const limitedClasses = filteredClasses.filter(cls => {
+      if (uniqueDays.length >= 5) return false;
+      if (!uniqueDays.includes(cls.date)) {
+        uniqueDays.push(cls.date);
+        return true;
+      }
+      return false;
+    });
+
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <ViewHeader title="Aulas Online EAD" onBack={() => navigateTo("dashboard")} />
+        <div className="p-6 space-y-4">
+          {limitedClasses.length > 0 ? (
+            limitedClasses.map((cls, index) => (
+              <div key={`online-class-row-${cls.id || index}-${index}`} className="card">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-bold text-slate-900">{cls.discipline_name}</h3>
+                    <div className="flex flex-col gap-1 mt-1">
+                      <p className="text-xs text-slate-500">
+                        {cls.date ? new Date(cls.date + 'T00:00:00').toLocaleDateString('pt-BR') : cls.day_of_week} • {cls.time}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {cls.mandatory && (
+                          <span className="text-[8px] font-bold px-2 py-1 uppercase tracking-wider bg-[#00a2b1]/10 text-[#00a2b1] rounded-lg">
+                            Obrigatória
+                          </span>
+                        )}
+                        <span className="text-[8px] font-bold px-2 py-1 uppercase tracking-wider bg-slate-100 text-slate-500 rounded-lg">
+                          {cls.course}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 flex items-center justify-center bg-orange-50 text-orange-500 rounded-2xl">
+                    <Monitor className="w-6 h-6" />
                   </div>
                 </div>
-                <div className="w-12 h-12 flex items-center justify-center bg-orange-50 text-orange-500 rounded-2xl">
-                  <Monitor className="w-6 h-6" />
-                </div>
+                <button 
+                  onClick={() => window.open(cls.link, '_blank')}
+                  className="w-full py-4 font-bold flex items-center justify-center gap-2 shadow-lg bg-[#00a2b1] text-white rounded-2xl active:scale-95 transition-all"
+                >
+                  <ExternalLink className="w-5 h-5" /> Acessar Aula Online
+                </button>
               </div>
-              <button 
-                onClick={() => window.open(cls.link, '_blank')}
-                className="w-full py-4 font-bold flex items-center justify-center gap-2 shadow-lg bg-[#00a2b1] text-white rounded-2xl active:scale-95 transition-all"
-              >
-                <ExternalLink className="w-5 h-5" /> Acessar Aula Online
-              </button>
+            ))
+          ) : (
+            <div className="card text-center py-12 text-slate-400">
+              Nenhuma aula online agendada para seu curso nesta semana.
             </div>
-          ))
-        ) : (
-          <div className="card text-center py-12 text-slate-400">
-            Nenhuma aula online agendada.
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const handleSaveProfile = async () => {
     if (!user) return;
     setIsSavingProfile(true);
+    setError("");
     try {
       let finalPhotoUrl = user.photo_url;
 
@@ -3062,7 +3381,7 @@ export default function App() {
           finalPhotoUrl = `${publicUrl}?t=${Date.now()}`;
         } catch (uploadErr: any) {
           console.error("Upload error details:", uploadErr);
-          alert(`Erro no Supabase: ${uploadErr.message || "Erro desconhecido"}. Verifique se o bucket 'student-photos' existe e se as políticas de INSERT/UPDATE estão configuradas no Storage.`);
+          setError("Erro ao enviar a foto. Verifique sua conexão com a internet.");
           setIsSavingProfile(false);
           return;
         }
@@ -3082,10 +3401,10 @@ export default function App() {
       setIsEditingProfile(false);
       setSelectedPhotoFile(null);
       setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-    } catch (err) {
+      console.log("Profile updated successfully!");
+    } catch (err: any) {
       console.error("Erro ao salvar perfil:", err);
-      alert("Erro ao salvar perfil");
+      setError("Erro de conexão ao salvar o perfil. Verifique sua rede.");
     } finally {
       setIsSavingProfile(false);
     }

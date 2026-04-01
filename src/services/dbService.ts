@@ -35,8 +35,11 @@ export const dbService = {
       .single();
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
       console.error('Login error from Supabase:', error.message, error.details, error.hint);
-      return null;
+      throw error;
     }
     
     if (!data) {
@@ -46,6 +49,65 @@ export const dbService = {
     
     console.log('Login successful for:', data.name);
     return data as User;
+  },
+
+  // Online Classes
+  getOnlineClasses: async (): Promise<OnlineClass[]> => {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('online_classes')
+      .select('*')
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Get online classes error:', error);
+      return [];
+    }
+    return data as OnlineClass[];
+  },
+
+  addOnlineClass: async (onlineClass: any): Promise<OnlineClass> => {
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+    const { data, error } = await supabase
+      .from('online_classes')
+      .insert([onlineClass])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Add online class error:', error);
+      throw error;
+    }
+    return data as OnlineClass;
+  },
+
+  updateOnlineClass: async (id: number, onlineClass: any): Promise<OnlineClass> => {
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+    const { data, error } = await supabase
+      .from('online_classes')
+      .update(onlineClass)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update online class error:', error);
+      throw error;
+    }
+    return data as OnlineClass;
+  },
+
+  deleteOnlineClass: async (id: number): Promise<void> => {
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+    const { error } = await supabase
+      .from('online_classes')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Delete online class error:', error);
+      throw error;
+    }
   },
 
   getUserByEmail: async (email: string): Promise<User | null> => {
@@ -335,16 +397,9 @@ export const dbService = {
 
   // Dashboard
   getStudentDashboard: async (studentId: number): Promise<DashboardData> => {
-    const [
-      gradesRes,
-      scheduleRes,
-      newsRes,
-      announcementsRes,
-      paymentsRes,
-      activitiesRes,
-      examsRes,
-      onlineClassesRes
-    ] = await Promise.all([
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+
+    const results = await Promise.all([
       supabase.from('grades').select('*').eq('student_id', studentId),
       supabase.from('schedules').select('*'),
       supabase.from('news').select('*'),
@@ -354,6 +409,24 @@ export const dbService = {
       supabase.from('exams').select('*'),
       supabase.from('online_classes').select('*')
     ]);
+
+    for (const res of results) {
+      if (res.error) {
+        console.error('Dashboard fetch error:', res.error);
+        throw res.error;
+      }
+    }
+
+    const [
+      gradesRes,
+      scheduleRes,
+      newsRes,
+      announcementsRes,
+      paymentsRes,
+      activitiesRes,
+      examsRes,
+      onlineClassesRes
+    ] = results;
 
     return {
       grades: (gradesRes.data || []) as Grade[],

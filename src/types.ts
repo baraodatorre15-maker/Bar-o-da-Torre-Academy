@@ -87,7 +87,9 @@ export interface OnlineClass {
   id: number;
   discipline_id: number;
   discipline_name: string;
+  course: string;
   link: string;
+  date: string;
   day_of_week: string;
   time: string;
   mandatory: boolean;
