@@ -69,9 +69,11 @@ function cn(...inputs: ClassValue[]) {
 
 const getCollegeName = (settings: AppSettings | null) => {
   const name = settings?.college_name || "Barão da Torre Academy";
-  if (name === "Barão de Mauá") return "Barão da Torre";
+  if (name === "Barão de Mauá" || name === "Barão da Torre") return "Barão da Torre Academy";
   return name;
 };
+
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
 
 interface LoginViewProps {
   appSettings: AppSettings | null;
@@ -1453,6 +1455,7 @@ export default function App() {
 
     const [isSimulatingLoading, setIsSimulatingLoading] = useState(false);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [editBirthState, setEditBirthState] = useState("");
     const [editNationality, setEditNationality] = useState("");
     const [editGender, setEditGender] = useState("");
@@ -1911,7 +1914,7 @@ export default function App() {
             </button>
             <div className="w-20 h-20 bg-white rounded-full overflow-hidden border border-white/50 shadow-md">
               <img 
-                src={user?.photo_url} 
+                src={user?.photo_url || DEFAULT_AVATAR} 
                 alt="Profile" 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
@@ -2409,7 +2412,7 @@ export default function App() {
             
             <div className="relative mb-4">
               <img 
-                src={user?.photo_url} 
+                src={user?.photo_url || DEFAULT_AVATAR} 
                 className="w-24 h-24 rounded-full border-4 border-white/20 object-cover shadow-xl"
                 alt="Profile"
                 referrerPolicy="no-referrer"
@@ -2622,7 +2625,7 @@ export default function App() {
                     {/* Uni Theme Card Design (With Photo) */}
                     <div className="bg-white p-3 flex gap-3 items-start">
                       <div className="w-16 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0">
-                        <img src={user?.photo_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img src={user?.photo_url || DEFAULT_AVATAR} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       </div>
                       <div className="flex flex-col flex-1">
                         <div className="flex items-baseline">
@@ -2692,7 +2695,7 @@ export default function App() {
                     
                     <div className="flex gap-4 items-center mb-4">
                       <div className="w-20 h-24 bg-slate-50 rounded-lg overflow-hidden border border-slate-100 shadow-inner">
-                        <img src={user?.photo_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img src={user?.photo_url || DEFAULT_AVATAR} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       </div>
                       <div className="flex-1">
                         <h4 className="text-sm font-black text-slate-800 leading-tight mb-0.5">{user?.name?.toUpperCase()}</h4>
@@ -2745,7 +2748,7 @@ export default function App() {
                     
                     <div className="flex gap-3 mb-4">
                       <div className="w-20 h-28 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
-                        <img src={user?.photo_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img src={user?.photo_url || DEFAULT_AVATAR} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       </div>
                       <div className="flex-1 flex flex-col justify-center">
                         <h4 className="text-xs font-black text-slate-800 leading-tight mb-0.5">{user?.name?.toUpperCase()}</h4>
@@ -2814,7 +2817,7 @@ export default function App() {
 
                     <div className="relative z-10 flex gap-4 items-end">
                       <img 
-                        src={user?.photo_url} 
+                        src={user?.photo_url || DEFAULT_AVATAR} 
                         className="w-20 h-24 flex-shrink-0 object-cover shadow-lg rounded-xl border-2 border-white/30"
                         alt="Student"
                         referrerPolicy="no-referrer"
@@ -3028,6 +3031,7 @@ export default function App() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+    setIsSavingProfile(true);
     try {
       let finalPhotoUrl = user.photo_url;
 
@@ -3053,10 +3057,13 @@ export default function App() {
         const filePath = `avatars/${fileName}`;
         
         try {
-          finalPhotoUrl = await db.uploadFile('student-photos', filePath, selectedPhotoFile);
+          const publicUrl = await db.uploadFile('student-photos', filePath, selectedPhotoFile);
+          // Add timestamp for cache busting
+          finalPhotoUrl = `${publicUrl}?t=${Date.now()}`;
         } catch (uploadErr: any) {
           console.error("Upload error details:", uploadErr);
           alert(`Erro no Supabase: ${uploadErr.message || "Erro desconhecido"}. Verifique se o bucket 'student-photos' existe e se as políticas de INSERT/UPDATE estão configuradas no Storage.`);
+          setIsSavingProfile(false);
           return;
         }
       }
@@ -3069,13 +3076,18 @@ export default function App() {
         short_name: editShortName,
         photo_url: finalPhotoUrl
       });
+      
       setUser(updated);
+      setEditPhotoUrl(updated.photo_url || "");
       setIsEditingProfile(false);
       setSelectedPhotoFile(null);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
+      console.error("Erro ao salvar perfil:", err);
       alert("Erro ao salvar perfil");
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -3091,7 +3103,7 @@ export default function App() {
         <div className="flex flex-col items-center">
           <div className="w-32 h-32 rounded-full overflow-hidden border-4 shadow-xl mb-4 relative group border-[#00a2b1]">
             <img 
-              src={editPhotoUrl || user?.photo_url} 
+              src={editPhotoUrl || user?.photo_url || DEFAULT_AVATAR} 
               alt="Profile" 
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
@@ -3264,9 +3276,17 @@ export default function App() {
                   </button>
                   <button 
                     onClick={handleSaveProfile}
-                    className="flex-1 py-2 text-xs font-bold text-white uppercase bg-blue-600 rounded-lg"
+                    disabled={isSavingProfile}
+                    className="flex-1 py-2 text-xs font-bold text-white uppercase bg-blue-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Salvar Alterações
+                    {isSavingProfile ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      "Salvar Alterações"
+                    )}
                   </button>
                 </div>
               )}

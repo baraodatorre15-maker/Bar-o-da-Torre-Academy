@@ -391,7 +391,7 @@ export const dbService = {
         primary_color: "#1fbba6",
         secondary_color: "#0066cc",
         theme: "barao",
-        college_name: "Barão da Torre"
+        college_name: "Barão da Torre Academy"
       };
     }
     const { data, error } = await supabase
@@ -407,7 +407,7 @@ export const dbService = {
         primary_color: "#1e3a8a",
         secondary_color: "#3b82f6",
         theme: "barao",
-        college_name: "Barão da Torre"
+        college_name: "Barão da Torre Academy"
       };
     }
     return data as AppSettings;
