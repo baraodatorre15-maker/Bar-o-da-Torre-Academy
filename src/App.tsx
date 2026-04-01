@@ -1887,7 +1887,7 @@ export default function App() {
           />
         </div>
         <div className="flex justify-between items-center relative z-10">
-          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-2 shadow-lg">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center p-2 shadow-lg">
             <img src={appSettings?.logo_url || "https://cdn-icons-png.flaticon.com/512/3135/3135810.png"} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
           </div>
           <div className="flex items-center gap-3">
@@ -1898,8 +1898,16 @@ export default function App() {
             >
               <LogOut className="w-5 h-5 text-white" />
             </button>
-            <button className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center shadow-md">
+            <button 
+              onClick={() => navigateTo("announcements")}
+              className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center shadow-md relative"
+            >
               <Bell className="w-5 h-5 text-white" />
+              {data.announcements?.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                  {data.announcements.length}
+                </span>
+              )}
             </button>
             <div className="w-20 h-20 bg-white rounded-full overflow-hidden border border-white/50 shadow-md">
               <img 
