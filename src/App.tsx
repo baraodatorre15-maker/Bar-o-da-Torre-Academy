@@ -1542,24 +1542,52 @@ export default function App() {
     };
 
     const fetchStudentData = async (id: number) => {
-      const dashboardData = await db.getStudentDashboard(id);
+      let dashboardData = await db.getStudentDashboard(id);
       
       // Auto-generate data if grades are empty
       if (dashboardData.grades.length === 0) {
         setLoading(true);
         try {
           await db.generateStudentFictionalData(id);
-          const updatedData = await db.getStudentDashboard(id);
-          setData(updatedData);
+          dashboardData = await db.getStudentDashboard(id);
         } catch (error) {
           console.error("Erro ao gerar dados automáticos:", error);
-          setData(dashboardData);
         } finally {
           setLoading(false);
         }
-      } else {
-        setData(dashboardData);
       }
+
+      // Fix broken news images and titles
+      if (dashboardData.news) {
+        dashboardData.news = dashboardData.news.map((n: any) => {
+          // Fix for "Bolsa de Estudo para Intercâmbio"
+          if (n.title && n.title.toLowerCase().includes("bolsa") && n.title.toLowerCase().includes("intercâmbio")) {
+            return { 
+              ...n, 
+              title: "Bolsa de Estudo para Intercâmbio",
+              image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=1000" 
+            };
+          }
+          // Fix for "Simpósio de Farmácia e Medicina"
+          if (n.title && n.title.toLowerCase().includes("simpósio") && n.title.toLowerCase().includes("farmácia")) {
+            return { 
+              ...n, 
+              title: "Simpósio de Farmácia e Medicina",
+              image: "https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&q=80&w=1000" 
+            };
+          }
+          // General fix for broken Unsplash IDs if any others exist
+          if (n.image && n.image.includes("1505751172107")) {
+            return { ...n, image: "https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&q=80&w=1000" };
+          }
+          if (n.image && n.image.includes("1523050335392")) {
+            return { ...n, image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=1000" };
+          }
+          return n;
+        });
+      }
+
+      setData(dashboardData);
     };
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -1849,7 +1877,7 @@ export default function App() {
   const StudentDashboard = () => (
     <div className="min-h-screen pb-20 bg-slate-50">
       {/* Barao Theme Header */}
-      <div className="bg-[#00a2b1] text-white p-4 pt-10 pb-6 relative overflow-hidden">
+      <div className="bg-[#00a2b1] text-white p-4 pt-4 pb-2 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <img 
             src="https://picsum.photos/seed/students/800/400" 
@@ -1873,7 +1901,7 @@ export default function App() {
             <button className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center shadow-md">
               <Bell className="w-5 h-5 text-white" />
             </button>
-            <div className="w-12 h-12 bg-white rounded-full overflow-hidden border-2 border-white/50 shadow-md">
+            <div className="w-20 h-20 bg-white rounded-full overflow-hidden border border-white/50 shadow-md">
               <img 
                 src={user?.photo_url} 
                 alt="Profile" 

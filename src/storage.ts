@@ -218,7 +218,7 @@ export const initialData = {
       id: 3,
       title: "Simpósio de Farmácia e Medicina",
       description: "Renomados especialistas discutem as tendências da saúde no Auditório Central com foco em novas terapias.",
-      image: "https://images.unsplash.com/photo-1505751172107-129658a287ec?auto=format&fit=crop&q=80&w=1000"
+      image: "https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&q=80&w=1000"
     },
     {
       id: 4,
@@ -240,9 +240,9 @@ export const initialData = {
     },
     {
       id: 7,
-      title: "Bolsas de Estudo para Intercâmbio",
+      title: "Bolsa de Estudo para Intercâmbio",
       description: "A Barão da Torre anuncia novas parcerias com universidades europeias para programas de intercâmbio em 2026.",
-      image: "https://images.unsplash.com/photo-1523050335392-9bc567597280?auto=format&fit=crop&q=80&w=1000"
+      image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=1000"
     },
     {
       id: 8,
@@ -587,7 +587,7 @@ export const getDB = () => {
     // Migration: Ensure online_classes and exams exist in the DB
     let structureChanged = false;
     
-    if (!parsed.news || parsed.news.length === 0 || (parsed.news[0] && parsed.news[0].image && parsed.news[0].image.includes("picsum"))) {
+    if (!parsed.news || parsed.news.length === 0 || (parsed.news[0] && parsed.news[0].image && parsed.news[0].image.includes("picsum")) || parsed.news.some((n: any) => n.image && (n.image.includes("1505751172107") || n.image.includes("1523050335392")))) {
       parsed.news = initialData.news;
       structureChanged = true;
     }
