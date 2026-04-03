@@ -183,6 +183,10 @@ export const initialData = {
     { id: 10, discipline_id: 10, discipline_name: "Psicologia Social", course: "Psicologia", link: "https://meet.google.com/vvv-wwww-xxx", date: "2026-04-03", day_of_week: "Sexta-feira", time: "08:00", mandatory: true },
     { id: 11, discipline_id: 11, discipline_name: "Sistemas Operacionais", course: "Engenharia de Software", link: "https://meet.google.com/yyy-zzzz-aaa", date: "2026-04-06", day_of_week: "Segunda-feira", time: "08:00", mandatory: true },
     { id: 12, discipline_id: 12, discipline_name: "Marketing Digital", course: "Marketing", link: "https://meet.google.com/xyz-uvwx-yz", date: "2026-04-01", day_of_week: "Quarta-feira", time: "14:00", mandatory: true },
+    { id: 26, discipline_id: 2, discipline_name: "Design de Interface", course: "Design Gráfico", link: "https://meet.google.com/des-int-1", date: "2026-04-02", day_of_week: "Quinta-feira", time: "19:00", mandatory: true },
+    { id: 27, discipline_id: 12, discipline_name: "Tipografia Avançada", course: "Design Gráfico", link: "https://meet.google.com/tip-adv-1", date: "2026-04-03", day_of_week: "Sexta-feira", time: "14:00", mandatory: true },
+    { id: 28, discipline_id: 8, discipline_name: "Direito Penal", course: "Direito", link: "https://meet.google.com/dir-pen-1", date: "2026-04-02", day_of_week: "Quinta-feira", time: "19:00", mandatory: true },
+    { id: 29, discipline_id: 9, discipline_name: "Contabilidade Geral", course: "Administração", link: "https://meet.google.com/con-ger-1", date: "2026-04-03", day_of_week: "Sexta-feira", time: "19:00", mandatory: true },
     // Future classes (outside 1 week)
     { id: 13, discipline_id: 1, discipline_name: "Cálculo I - Monitoria", course: "Engenharia de Software", link: "https://meet.google.com/mon-calc-1", date: "2026-04-10", day_of_week: "Sexta-feira", time: "09:00", mandatory: false },
     { id: 14, discipline_id: 2, discipline_name: "Programação Web - Lab Extra", course: "Engenharia de Software", link: "https://meet.google.com/lab-web-extra", date: "2026-04-11", day_of_week: "Sábado", time: "14:00", mandatory: false },
@@ -350,20 +354,35 @@ export const generateTuitionPayments = (studentId: number) => {
 
 export const getDisciplinesByCourse = (course: string) => {
   const courseUpper = (course || "").toUpperCase();
-  const disciplines = initialData.disciplines;
+  const database = getDB();
+  const disciplines = database.disciplines || initialData.disciplines;
   
+  // First check if any disciplines have a matching course field
+  const explicitDisciplines = disciplines.filter((d: any) => {
+    if (!d.course) return false;
+    if (Array.isArray(d.course)) {
+      return d.course.some((c: string) => c.toUpperCase() === courseUpper);
+    }
+    return d.course.toUpperCase() === courseUpper;
+  });
+  
+  if (explicitDisciplines.length > 0) {
+    return explicitDisciplines;
+  }
+  
+  // Fallback to hardcoded mapping for initial data
   if (courseUpper === "FARMÁCIA") {
-    return disciplines.filter(d => [4, 5, 6, 7].includes(d.id));
+    return disciplines.filter((d: any) => [4, 5, 6, 7].includes(d.id));
   } else if (courseUpper === "ENGENHARIA DE SOFTWARE") {
-    return disciplines.filter(d => [1, 2, 3, 11].includes(d.id));
+    return disciplines.filter((d: any) => [1, 2, 3, 11].includes(d.id));
   } else if (courseUpper === "DIREITO") {
-    return disciplines.filter(d => [8].includes(d.id));
+    return disciplines.filter((d: any) => [8].includes(d.id));
   } else if (courseUpper === "ADMINISTRAÇÃO") {
-    return disciplines.filter(d => [9].includes(d.id));
+    return disciplines.filter((d: any) => [9].includes(d.id));
   } else if (courseUpper === "PSICOLOGIA") {
-    return disciplines.filter(d => [10].includes(d.id));
+    return disciplines.filter((d: any) => [10].includes(d.id));
   } else if (courseUpper === "DESIGN GRÁFICO") {
-    return disciplines.filter(d => [2, 12].includes(d.id));
+    return disciplines.filter((d: any) => [2, 12].includes(d.id));
   }
   
   return disciplines;
@@ -706,9 +725,10 @@ export const db = {
           user.enrollment_proof_url = storedProof;
         }
       }
+      return user;
     }
     
-    return user;
+    throw new Error("AUTH_ERROR: Matrícula ou senha incorretos.");
   },
   // Online Classes
   getOnlineClasses: async () => {
@@ -738,6 +758,34 @@ export const db = {
     database.online_classes = (database.online_classes || []).filter((c: any) => c.id !== id);
     saveDB(database);
   },
+  // Disciplines
+  getDisciplines: async () => {
+    const database = getDB();
+    return database.disciplines || [];
+  },
+  addDiscipline: async (discipline: any) => {
+    const database = getDB();
+    if (!database.disciplines) database.disciplines = [];
+    const newDiscipline = { ...discipline, id: Date.now() };
+    database.disciplines.push(newDiscipline);
+    saveDB(database);
+    return newDiscipline;
+  },
+  updateDiscipline: async (id: number, discipline: any) => {
+    const database = getDB();
+    const index = database.disciplines.findIndex((d: any) => d.id === id);
+    if (index !== -1) {
+      database.disciplines[index] = { ...database.disciplines[index], ...discipline };
+      saveDB(database);
+      return database.disciplines[index];
+    }
+    throw new Error("Disciplina não encontrada");
+  },
+  deleteDiscipline: async (id: number) => {
+    const database = getDB();
+    database.disciplines = (database.disciplines || []).filter((d: any) => d.id !== id);
+    saveDB(database);
+  },
   getStudentDashboard: (studentId: number) => {
     const database = getDB();
     const user = database.users.find((u: any) => Number(u.id) === Number(studentId));
@@ -765,7 +813,37 @@ export const db = {
       }),
       activities: (database.activities || []).filter((a: any) => Number(a.student_id) === Number(studentId)),
       exams: (database.exams || []).filter((e: any) => relevantDisciplineIds.includes(e.discipline_id)),
-      online_classes: (database.online_classes || []).filter((c: any) => relevantDisciplineIds.includes(c.discipline_id))
+      online_classes: (() => {
+        const filtered = (database.online_classes || [])
+          .filter((c: any) => {
+            // Filter by discipline relevance
+            const isRelevant = relevantDisciplineIds.includes(c.discipline_id);
+            if (!isRelevant) return false;
+            
+            // Filter by date (only from today onwards, max 7 days)
+            const [year, month, day] = c.date.split("-").map(Number);
+            const classDate = new Date(year, month - 1, day);
+            classDate.setHours(0, 0, 0, 0);
+            
+            const oneWeekFromNow = new Date(today);
+            oneWeekFromNow.setDate(today.getDate() + 7);
+            oneWeekFromNow.setHours(23, 59, 59, 999);
+            
+            return classDate >= today && classDate <= oneWeekFromNow;
+          })
+          .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+        // Group by date and take only one per day, max 5 days
+        const uniqueDays: string[] = [];
+        return filtered.filter((cls: any) => {
+          if (uniqueDays.length >= 5) return false;
+          if (!uniqueDays.includes(cls.date)) {
+            uniqueDays.push(cls.date);
+            return true;
+          }
+          return false;
+        });
+      })()
     };
   },
   getStudents: async () => {

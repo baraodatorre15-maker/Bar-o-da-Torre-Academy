@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { User, DashboardData, AppSettings, Activity, Grade, Schedule, NewsItem, Announcement, Payment, Exam, OnlineClass } from '../types';
-import { generateTuitionPayments, generateRandomGrades } from '../storage';
+import { generateTuitionPayments, generateRandomGrades, db } from '../storage';
 
 const dataURLtoFile = (dataurl: string, filename: string) => {
   const arr = dataurl.split(',');
@@ -34,17 +34,24 @@ export const dbService = {
       .eq('password', pass)
       .single();
 
+    console.log('Supabase response:', { data, error });
+
     if (error) {
       if (error.code === 'PGRST116') {
-        return null;
+        console.warn(`Login failed: No user found with matricula ${matricula} and the provided password.`);
+        throw new Error("AUTH_ERROR: Matrícula ou senha incorretos.");
       }
-      console.error('Login error from Supabase:', error.message, error.details, error.hint);
-      throw error;
+      if (error.message?.includes('relation "users" does not exist')) {
+        console.error('Supabase table "users" is missing. Please run the SQL migration.');
+        throw new Error("AUTH_ERROR: Erro de configuração: Tabela 'users' não encontrada no Supabase.");
+      }
+      console.error('Login error from Supabase:', error.message, error.details, error.hint, error.code);
+      throw new Error(error.message || "Erro de conexão com o banco de dados.");
     }
     
     if (!data) {
       console.warn('Login failed: No user found with these credentials.');
-      return null;
+      throw new Error("AUTH_ERROR: Matrícula ou senha incorretos.");
     }
     
     console.log('Login successful for:', data.name);
@@ -68,6 +75,7 @@ export const dbService = {
 
   addOnlineClass: async (onlineClass: any): Promise<OnlineClass> => {
     if (!supabase) throw new Error('Supabase client is not initialized.');
+    console.log('Supabase: Adding online class:', onlineClass);
     const { data, error } = await supabase
       .from('online_classes')
       .insert([onlineClass])
@@ -75,14 +83,16 @@ export const dbService = {
       .single();
 
     if (error) {
-      console.error('Add online class error:', error);
+      console.error('Supabase: Add online class error:', error);
       throw error;
     }
+    console.log('Supabase: Online class added successfully:', data);
     return data as OnlineClass;
   },
 
   updateOnlineClass: async (id: number, onlineClass: any): Promise<OnlineClass> => {
     if (!supabase) throw new Error('Supabase client is not initialized.');
+    console.log(`Supabase: Updating online class ${id}:`, onlineClass);
     const { data, error } = await supabase
       .from('online_classes')
       .update(onlineClass)
@@ -91,14 +101,15 @@ export const dbService = {
       .single();
 
     if (error) {
-      console.error('Update online class error:', error);
+      console.error('Supabase: Update online class error:', error);
       throw error;
     }
+    console.log('Supabase: Online class updated successfully:', data);
     return data as OnlineClass;
   },
 
   deleteOnlineClass: async (id: number): Promise<void> => {
-    if (!supabase) throw new Error('Supabase client is not initialized.');
+    if (!supabase) return db.deleteOnlineClass(id);
     const { error } = await supabase
       .from('online_classes')
       .delete()
@@ -106,6 +117,69 @@ export const dbService = {
 
     if (error) {
       console.error('Delete online class error:', error);
+      throw error;
+    }
+  },
+
+  // Disciplines
+  getDisciplines: async (): Promise<Schedule[]> => {
+    if (!supabase) return db.getDisciplines();
+    const { data, error } = await supabase
+      .from('schedules')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Get disciplines error:', error);
+      return db.getDisciplines();
+    }
+    return data as Schedule[];
+  },
+
+  addDiscipline: async (discipline: any): Promise<Schedule> => {
+    console.log('dbService: addDiscipline', discipline);
+    if (!supabase) return db.addDiscipline(discipline);
+    const { data, error } = await supabase
+      .from('schedules')
+      .insert([discipline])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Add discipline error:', error);
+      throw error;
+    }
+    console.log('dbService: addDiscipline success', data);
+    return data as Schedule;
+  },
+
+  updateDiscipline: async (id: number, discipline: any): Promise<Schedule> => {
+    console.log('dbService: updateDiscipline', id, discipline);
+    if (!supabase) return db.updateDiscipline(id, discipline);
+    const { data, error } = await supabase
+      .from('schedules')
+      .update(discipline)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update discipline error:', error);
+      throw error;
+    }
+    console.log('dbService: updateDiscipline success', data);
+    return data as Schedule;
+  },
+
+  deleteDiscipline: async (id: number): Promise<void> => {
+    if (!supabase) return db.deleteDiscipline(id);
+    const { error } = await supabase
+      .from('schedules')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Delete discipline error:', error);
       throw error;
     }
   },

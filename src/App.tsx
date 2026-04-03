@@ -29,6 +29,7 @@ import {
   Wifi,
   Loader2,
   Monitor,
+  Video,
   ClipboardList,
   ExternalLink,
   Menu,
@@ -218,7 +219,7 @@ interface AdminDashboardProps {
   appSettings: any;
   setAppSettings: (val: any) => void;
   handleLogout: () => void;
-  setShowToast: (val: boolean) => void;
+  setShowToast: (val: any) => void;
 }
 
 const AdminNavItem = ({ icon, label, active, onClick }: any) => (
@@ -243,14 +244,27 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
   const [editingStudent, setEditingStudent] = useState<User | null>(null);
   const [editingOnlineClass, setEditingOnlineClass] = useState<OnlineClass | null>(null);
   const [onlineClasses, setOnlineClasses] = useState<OnlineClass[]>([]);
+  const [disciplines, setDisciplines] = useState<Schedule[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [generatingData, setGeneratingData] = useState(false);
 
+  // Discipline Form State
+  const [showDisciplineModal, setShowDisciplineModal] = useState(false);
+  const [editingDiscipline, setEditingDiscipline] = useState<Schedule | null>(null);
+  const [dName, setDName] = useState("");
+  const [dProfessor, setDProfessor] = useState("");
+  const [dRoom, setDRoom] = useState("");
+  const [dDay, setDDay] = useState("Segunda-feira");
+  const [dTime, setDTime] = useState("");
+  const [dCourses, setDCourses] = useState<string[]>([]);
+
   // Online Class Form State
+  const [ocDisciplineId, setOcDisciplineId] = useState<number | "">("");
   const [ocDisciplineName, setOcDisciplineName] = useState("");
-  const [ocCourse, setOcCourse] = useState("");
+  const [ocCourses, setOcCourses] = useState<string[]>([]);
   const [ocLink, setOcLink] = useState("");
   const [ocDate, setOcDate] = useState("");
+  const [ocDayOfWeek, setOcDayOfWeek] = useState("Segunda-feira");
   const [ocTime, setOcTime] = useState("");
   const [ocMandatory, setOcMandatory] = useState(true);
   
@@ -259,8 +273,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
       const newStatus = student.status === 'blocked' ? 'active' : 'blocked';
       await db.updateStudent(student.id, { status: newStatus });
       fetchStudents();
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      setShowToast({ show: true, message: "Status do aluno atualizado!", type: 'success' });
     } catch (error) {
       alert("Erro ao atualizar status do aluno");
     }
@@ -293,33 +306,62 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
     modern: ""
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const fetchStudents = async () => {
-    const studentsData = await db.getStudents();
-    setStudents(studentsData);
+    try {
+      const studentsData = await db.getStudents();
+      setStudents(studentsData || []);
+    } catch (err) {
+      console.error("Error fetching students:", err);
+    }
   };
 
   const fetchPayments = async () => {
-    const paymentsData = await db.getPayments();
-    setPayments(paymentsData);
+    try {
+      const paymentsData = await db.getPayments();
+      setPayments(paymentsData || []);
+    } catch (err) {
+      console.error("Error fetching payments:", err);
+    }
   };
 
   const fetchOnlineClasses = async () => {
-    const data = await db.getOnlineClasses();
-    setOnlineClasses(data);
+    try {
+      const data = await db.getOnlineClasses();
+      setOnlineClasses(data || []);
+    } catch (err) {
+      console.error("Error fetching online classes:", err);
+    }
+  };
+
+  const fetchDisciplines = async () => {
+    console.log("Fetching disciplines...");
+    try {
+      const data = await db.getDisciplines();
+      console.log("Disciplines fetched:", data);
+      setDisciplines(data || []);
+    } catch (err) {
+      console.error("Error fetching disciplines:", err);
+    }
   };
 
   useEffect(() => {
+    console.log("AdminDashboard mounted. Supabase configured:", isSupabaseConfigured);
     fetchStudents();
     fetchPayments();
     fetchOnlineClasses();
+    fetchDisciplines();
   }, []);
 
   const handleOpenEditOnlineClass = (oc: OnlineClass) => {
     setEditingOnlineClass(oc);
+    setOcDisciplineId(oc.discipline_id);
     setOcDisciplineName(oc.discipline_name);
-    setOcCourse(oc.course);
+    setOcCourses(oc.course ? (Array.isArray(oc.course) ? oc.course : [oc.course]) : []);
     setOcLink(oc.link);
     setOcDate(oc.date);
+    setOcDayOfWeek(oc.day_of_week || "Segunda-feira");
     setOcTime(oc.time);
     setOcMandatory(oc.mandatory);
     setShowOnlineClassModal(true);
@@ -328,38 +370,134 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
   const handleCloseOnlineClassModal = () => {
     setShowOnlineClassModal(false);
     setEditingOnlineClass(null);
+    setOcDisciplineId("");
     setOcDisciplineName("");
-    setOcCourse("");
+    setOcCourses([]);
     setOcLink("");
     setOcDate("");
+    setOcDayOfWeek("Segunda-feira");
     setOcTime("");
     setOcMandatory(true);
   };
 
-  const handleSaveOnlineClass = async (e: React.FormEvent) => {
+  const handleOpenEditDiscipline = (d: Schedule) => {
+    setEditingDiscipline(d);
+    setDName(d.name);
+    setDProfessor(d.professor);
+    setDRoom(d.room);
+    setDDay(d.day_of_week);
+    setDTime(d.time);
+    setDCourses(Array.isArray(d.course) ? d.course : d.course ? [d.course] : []);
+    setShowDisciplineModal(true);
+  };
+
+  const handleCloseDisciplineModal = () => {
+    setShowDisciplineModal(false);
+    setEditingDiscipline(null);
+    setDName("");
+    setDProfessor("");
+    setDRoom("");
+    setDDay("Segunda-feira");
+    setDTime("");
+    setDCourses([]);
+  };
+
+  const handleSaveDiscipline = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Saving discipline...", { dName, dProfessor, dRoom, dDay, dTime, dCourses });
     try {
-      const ocData = {
-        discipline_name: ocDisciplineName,
-        course: ocCourse,
-        link: ocLink,
-        date: ocDate,
-        time: ocTime,
-        mandatory: ocMandatory,
-        discipline_id: 1 // Placeholder
+      // Ensure course is a string if it's an array
+      const courseValue = Array.isArray(dCourses) ? dCourses.join(', ') : (dCourses || "");
+      
+      const dData = {
+        name: dName,
+        professor: dProfessor,
+        room: dRoom,
+        day_of_week: dDay,
+        time: dTime,
+        course: courseValue
       };
 
-      if (editingOnlineClass) {
-        await db.updateOnlineClass(editingOnlineClass.id, ocData);
+      if (editingDiscipline) {
+        console.log("Updating existing discipline:", editingDiscipline.id);
+        await db.updateDiscipline(editingDiscipline.id, dData);
       } else {
-        await db.addOnlineClass(ocData);
+        console.log("Adding new discipline");
+        await db.addDiscipline(dData);
       }
+      handleCloseDisciplineModal();
+      fetchDisciplines();
+      setShowToast({ show: true, message: "Disciplina salva com sucesso!", type: 'success' });
+    } catch (err) {
+      console.error("Error saving discipline:", err);
+      setShowToast({ show: true, message: "Erro ao salvar disciplina: " + (err instanceof Error ? err.message : String(err)), type: 'error' });
+    }
+  };
+
+  const handleDeleteDiscipline = async (id: number) => {
+    if (window.confirm("Tem certeza que deseja excluir esta disciplina?")) {
+      try {
+        await db.deleteDiscipline(id);
+        fetchDisciplines();
+        setShowToast({ show: true, message: "Disciplina excluída com sucesso!", type: 'success' });
+      } catch (err) {
+        setShowToast({ show: true, message: "Erro ao excluir disciplina.", type: 'error' });
+      }
+    }
+  };
+
+  const handleSaveOnlineClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("handleSaveOnlineClass triggered");
+    console.log("Form State:", { ocDisciplineId, ocDisciplineName, ocCourses, ocLink, ocDayOfWeek, ocTime });
+    
+    if (!ocDisciplineId || ocDisciplineId === 0) {
+      setShowToast({ show: true, message: "Por favor, selecione uma disciplina.", type: 'error' });
+      return;
+    }
+
+    if (!ocLink) {
+      setShowToast({ show: true, message: "Por favor, insira o link da aula.", type: 'error' });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Ensure course is a string if it's an array, as the DB likely expects a string based on initialData
+      const courseValue = Array.isArray(ocCourses) ? ocCourses.join(', ') : (ocCourses || "");
+      
+      const ocData = {
+        discipline_id: Number(ocDisciplineId),
+        discipline_name: ocDisciplineName,
+        course: courseValue,
+        link: ocLink,
+        date: ocDate || new Date().toISOString().split('T')[0],
+        time: ocTime,
+        mandatory: ocMandatory,
+        day_of_week: ocDayOfWeek
+      };
+
+      console.log("Saving Online Class Data:", ocData);
+      
+      if (editingOnlineClass) {
+        console.log("Updating online class ID:", editingOnlineClass.id);
+        await db.updateOnlineClass(editingOnlineClass.id, ocData);
+        setShowToast({ show: true, message: "Aula online atualizada com sucesso!", type: 'success' });
+      } else {
+        console.log("Adding new online class...");
+        const result = await db.addOnlineClass(ocData);
+        console.log("Add result:", result);
+        setShowToast({ show: true, message: "Aula online cadastrada com sucesso!", type: 'success' });
+      }
+      
+      console.log("Save successful, closing modal and fetching data...");
       handleCloseOnlineClassModal();
       fetchOnlineClasses();
-      alert("Aula online salva com sucesso!");
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar aula online.");
+    } catch (err: any) {
+      console.error("Error saving online class:", err);
+      setShowToast({ show: true, message: "Erro ao salvar aula online: " + (err.message || "Erro desconhecido"), type: 'error' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -368,8 +506,9 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
       try {
         await db.deleteOnlineClass(id);
         fetchOnlineClasses();
+        setShowToast({ show: true, message: "Aula excluída com sucesso!", type: 'success' });
       } catch (err) {
-        alert("Erro ao excluir aula.");
+        setShowToast({ show: true, message: "Erro ao excluir aula.", type: 'error' });
       }
     }
   };
@@ -433,7 +572,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
       const count = await db.generateAllFictionalData();
       console.log("Generation result count:", count);
       if (count > 0) {
-        setShowToast(true);
+        setShowToast({ show: true, message: "Dados gerados com sucesso!", type: 'success' });
         fetchStudents();
         fetchPayments();
       } else {
@@ -548,17 +687,23 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
       {/* Main Content */}
       <div className="flex-1 p-8 overflow-auto bg-slate-50">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold text-slate-900">
-            {activeTab === "students" ? "Gerenciamento de Alunos" : 
-             activeTab === "online-classes" ? "Aulas Online EAD" :
-             activeTab === "disciplines" ? "Disciplinas" :
-             activeTab === "announcements" ? "Comunicados" : 
-             activeTab === "settings" ? "Configurações" : "Financeiro"}
-          </h2>
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-bold text-slate-900">
+              {activeTab === "students" ? "Gerenciamento de Alunos" : 
+               activeTab === "online-classes" ? "Aulas Online EAD" :
+               activeTab === "disciplines" ? "Disciplinas" :
+               activeTab === "announcements" ? "Comunicados" : 
+               activeTab === "settings" ? "Configurações" : "Financeiro"}
+            </h2>
+            <div className={`mt-1 flex items-center gap-2 px-2 py-0.5 rounded-full text-[8px] font-bold uppercase w-fit ${isSupabaseConfigured ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${isSupabaseConfigured ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
+              {isSupabaseConfigured ? 'Supabase Conectado' : 'Modo Local (Offline)'}
+            </div>
+          </div>
           <div className="flex items-center gap-4">
-            {(activeTab === "students" || activeTab === "financial" || activeTab === "online-classes") && (
+            {(activeTab === "students" || activeTab === "financial" || activeTab === "online-classes" || activeTab === "disciplines") && (
               <>
-                {activeTab !== "online-classes" && (
+                {(activeTab !== "online-classes" && activeTab !== "disciplines") && (
                   <button 
                     onClick={handleGenerateFictionalData}
                     disabled={generatingData}
@@ -583,6 +728,14 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                     className="flex items-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors bg-[#00a2b1] text-white hover:bg-[#008f9d]"
                   >
                     <Plus className="w-5 h-5" /> Nova Aula
+                  </button>
+                )}
+                {activeTab === "disciplines" && (
+                  <button 
+                    onClick={() => setShowDisciplineModal(true)}
+                    className="flex items-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors bg-[#00a2b1] text-white hover:bg-[#008f9d]"
+                  >
+                    <Plus className="w-5 h-5" /> Nova Disciplina
                   </button>
                 )}
               </>
@@ -703,7 +856,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                         </span>
                       </td>
                       <td className="p-4 text-sm text-slate-600">
-                        {oc.date} às {oc.time}
+                        {(oc.day_of_week || (oc.date ? new Date(oc.date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long' }) : '')).split('-')[0].charAt(0).toUpperCase() + (oc.day_of_week || (oc.date ? new Date(oc.date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long' }) : '')).split('-')[0].slice(1).toLowerCase()} às {oc.time}
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
@@ -730,6 +883,64 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                       </td>
                     </tr>
                   )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : activeTab === "disciplines" ? (
+          <div className="space-y-6">
+            <div className="card p-0 overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="border-b bg-[#00a2b1] text-white border-[#00a2b1]">
+                  <tr>
+                    <th className="p-4 text-xs font-bold uppercase">Disciplina</th>
+                    <th className="p-4 text-xs font-bold uppercase">Professor</th>
+                    <th className="p-4 text-xs font-bold uppercase">Curso</th>
+                    <th className="p-4 text-xs font-bold uppercase">Horário</th>
+                    <th className="p-4 text-xs font-bold uppercase">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {disciplines.map((d, index) => (
+                    <tr key={`admin-d-${d.id || index}`} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4 font-bold text-slate-700">{d.name}</td>
+                      <td className="p-4 text-sm text-slate-600">{d.professor}</td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-1">
+                          {Array.isArray(d.course) ? (
+                            d.course.map((c, i) => (
+                              <span key={`d-course-tag-${d.id}-${i}`} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[8px] font-bold uppercase">
+                                {c}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[8px] font-bold uppercase">
+                              {d.course || "Não vinculado"}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 text-xs text-slate-500">
+                        {d.day_of_week}, {d.time}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleOpenEditDiscipline(d)}
+                            className="p-2 text-[#00a2b1] hover:bg-[#00a2b1]/10 rounded-lg transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteDiscipline(d.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -817,6 +1028,29 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                     <AlertCircle className="w-4 h-4" /> Redefinir Banco de Dados
                   </button>
                 </div>
+
+                <div className="pt-6 border-t border-slate-100">
+                  <h4 className="text-sm font-bold text-blue-600 uppercase mb-4">Ferramentas de Dados</h4>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Isso irá restaurar as aulas online, notícias e comunicados padrão para o banco de dados (Supabase ou Local).
+                  </p>
+                  <button 
+                    onClick={async () => {
+                      if (window.confirm("Deseja restaurar as aulas online e notícias padrão?")) {
+                        try {
+                          await db.bootstrapDatabase(initialData);
+                          setShowToast({ show: true, message: "Dados restaurados com sucesso!", type: "success" });
+                          window.location.reload();
+                        } catch (err) {
+                          setShowToast({ show: true, message: "Erro ao restaurar dados.", type: "error" });
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" /> Restaurar Dados de Demonstração
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -885,7 +1119,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
             />
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl max-h-[90vh] overflow-y-auto modal-container"
             >
               <h3 className="text-2xl font-bold text-slate-900 mb-6">
                 {editingStudent ? "Editar Aluno" : "Cadastrar Novo Aluno"}
@@ -1120,7 +1354,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
             />
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl max-h-[90vh] overflow-y-auto modal-container"
             >
               <h3 className="text-2xl font-bold text-slate-900 mb-6">
                 {editingOnlineClass ? "Editar Aula Online" : "Nova Aula Online"}
@@ -1128,27 +1362,86 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
               
               <form onSubmit={handleSaveOnlineClass} className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Nome da Disciplina</label>
-                  <input type="text" className="input-field" value={ocDisciplineName} onChange={e => setOcDisciplineName(e.target.value)} required />
+                  <label className="text-xs font-bold text-slate-500 uppercase">Disciplina</label>
+                  <select 
+                    className="input-field" 
+                    value={ocDisciplineId} 
+                    onChange={e => {
+                      const id = Number(e.target.value);
+                      setOcDisciplineId(id);
+                      const d = disciplines.find(disc => disc.id === id);
+                      if (d) {
+                        setOcDisciplineName(d.name);
+                        setOcCourses(d.course ? (Array.isArray(d.course) ? d.course : [d.course]) : []);
+                      }
+                    }} 
+                  >
+                    <option value="">Selecione uma disciplina</option>
+                    {disciplines.length === 0 && (
+                      <option disabled value="">Nenhuma disciplina cadastrada</option>
+                    )}
+                    {disciplines.map(d => (
+                      <option key={`oc-disc-opt-${d.id}`} value={d.id}>{d.name} ({Array.isArray(d.course) ? d.course.join(', ') : d.course})</option>
+                    ))}
+                  </select>
+                  {disciplines.length === 0 && (
+                    <p className="text-[10px] text-red-500 font-bold mt-1">
+                      Você precisa cadastrar pelo menos uma disciplina antes de criar uma aula online.
+                    </p>
+                  )}
                 </div>
                 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Curso</label>
-                  <select className="input-field" value={ocCourse} onChange={e => setOcCourse(e.target.value)} required>
-                    <option value="">Selecione um curso</option>
-                    {COURSES.map((c, i) => <option key={`oc-course-opt-${c}-${i}`} value={c}>{c}</option>)}
-                  </select>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Cursos Vinculados (Confirmar)</label>
+                  <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                    {COURSES.map((c, i) => (
+                      <label key={`oc-course-check-${c}-${i}`} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded transition-colors">
+                        <input 
+                          type="checkbox" 
+                          checked={ocCourses.includes(c)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setOcCourses([...ocCourses, c]);
+                            } else {
+                              setOcCourses(ocCourses.filter(item => item !== c));
+                            }
+                          }}
+                          className="w-4 h-4 text-[#00a2b1] rounded focus:ring-[#00a2b1]"
+                        />
+                        <span className="text-xs font-medium text-slate-700">{c}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase">Link da Aula (Google Meet/Zoom)</label>
-                  <input type="url" className="input-field" value={ocLink} onChange={e => setOcLink(e.target.value)} placeholder="https://meet.google.com/..." required />
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={ocLink} 
+                    onChange={e => setOcLink(e.target.value)} 
+                    placeholder="https://meet.google.com/..." 
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Data</label>
-                    <input type="date" className="input-field" value={ocDate} onChange={e => setOcDate(e.target.value)} required />
+                    <label className="text-xs font-bold text-slate-500 uppercase">Dia da Semana</label>
+                    <select 
+                      className="input-field" 
+                      value={ocDayOfWeek} 
+                      onChange={e => setOcDayOfWeek(e.target.value)} 
+                      required
+                    >
+                      <option value="Segunda-feira">Segunda-feira</option>
+                      <option value="Terça-feira">Terça-feira</option>
+                      <option value="Quarta-feira">Quarta-feira</option>
+                      <option value="Quinta-feira">Quinta-feira</option>
+                      <option value="Sexta-feira">Sexta-feira</option>
+                      <option value="Sábado">Sábado</option>
+                      <option value="Domingo">Domingo</option>
+                    </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-500 uppercase">Hora</label>
@@ -1168,11 +1461,113 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                 </div>
 
                 <div className="flex gap-4 pt-4">
-                  <button type="button" onClick={handleCloseOnlineClassModal} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition-colors">
+                  <button 
+                    type="button" 
+                    onClick={handleCloseOnlineClassModal} 
+                    className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition-colors"
+                    disabled={isSaving}
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="flex-1 btn-primary py-3 flex items-center justify-center gap-2"
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      editingOnlineClass ? "Salvar Alterações" : "Cadastrar Aula"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add/Edit Discipline Modal */}
+      <AnimatePresence>
+        {showDisciplineModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={handleCloseDisciplineModal}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl max-h-[90vh] overflow-y-auto modal-container"
+            >
+              <h3 className="text-2xl font-bold text-slate-900 mb-6">
+                {editingDiscipline ? "Editar Disciplina" : "Nova Disciplina"}
+              </h3>
+              
+              <form onSubmit={handleSaveDiscipline} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Nome da Disciplina</label>
+                  <input type="text" className="input-field" value={dName} onChange={e => setDName(e.target.value)} required />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Professor</label>
+                  <input type="text" className="input-field" value={dProfessor} onChange={e => setDProfessor(e.target.value)} required />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Sala</label>
+                    <input type="text" className="input-field" value={dRoom} onChange={e => setDRoom(e.target.value)} placeholder="Ex: Sala 101" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Cursos Vinculados</label>
+                    <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                      {COURSES.map((c, i) => (
+                        <label key={`d-course-check-${c}-${i}`} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded transition-colors">
+                          <input 
+                            type="checkbox" 
+                            checked={dCourses.includes(c)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setDCourses([...dCourses, c]);
+                              } else {
+                                setDCourses(dCourses.filter(item => item !== c));
+                              }
+                            }}
+                            className="w-4 h-4 text-[#00a2b1] rounded focus:ring-[#00a2b1]"
+                          />
+                          <span className="text-xs font-medium text-slate-700">{c}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Dia da Semana</label>
+                    <select className="input-field" value={dDay} onChange={e => setDDay(e.target.value)}>
+                      {["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"].map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Horário</label>
+                    <input type="text" className="input-field" value={dTime} onChange={e => setDTime(e.target.value)} placeholder="Ex: 08:00 - 10:00" required />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button type="button" onClick={handleCloseDisciplineModal} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition-colors">
                     Cancelar
                   </button>
                   <button type="submit" className="flex-1 btn-primary py-3">
-                    {editingOnlineClass ? "Salvar Alterações" : "Cadastrar Aula"}
+                    {editingDiscipline ? "Salvar Alterações" : "Cadastrar Disciplina"}
                   </button>
                 </div>
               </form>
@@ -1662,13 +2057,13 @@ export default function App() {
       }
     }, [view, data.news]);
 
-    const [showToast, setShowToast] = useState(false);
+    const [showToast, setShowToast] = useState<{show: boolean, message: string, type: 'success' | 'error'}>({show: false, message: "", type: 'success'});
     useEffect(() => {
-      if (showToast) {
-        const timer = setTimeout(() => setShowToast(false), 3000);
+      if (showToast.show) {
+        const timer = setTimeout(() => setShowToast(prev => ({...prev, show: false})), 3000);
         return () => clearTimeout(timer);
       }
-    }, [showToast]);
+    }, [showToast.show]);
 
     useEffect(() => {
       window.scrollTo(0, 0);
@@ -1849,77 +2244,166 @@ export default function App() {
       setError("");
       setDebugInfo(null);
       
-      const maxRetries = 3;
-      let attempt = 0;
-      let userData = null;
-      let lastError = null;
+      try {
+        const maxRetries = 3;
+        let attempt = 0;
+        let userData = null;
+        let lastError = null;
 
-      while (attempt < maxRetries) {
-        try {
-          attempt++;
-          if (attempt > 1) {
-            setError(`Conexão instável, tentando novamente (${attempt}/${maxRetries})...`);
+        while (attempt < maxRetries) {
+          try {
+            attempt++;
+            if (attempt > 1) {
+              setError(`Conexão instável, tentando novamente (${attempt}/${maxRetries})...`);
+            }
+            
+            console.log(`Tentativa de login ${attempt}/${maxRetries} para matrícula: ${matricula}`);
+            
+            // Adicionando timeout para evitar que fique preso carregando infinitamente
+            const loginPromise = db.login(matricula, password);
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error("A operação de login expirou. Verifique sua conexão.")), 10000)
+            );
+            
+            userData = await Promise.race([loginPromise, timeoutPromise]) as User | null;
+            console.log(`Resultado da tentativa ${attempt}:`, userData ? "Usuário encontrado" : "Usuário não encontrado");
+            
+            lastError = null;
+            break; 
+          } catch (err: any) {
+            lastError = err;
+            console.error(`Erro na tentativa ${attempt}:`, err);
+            
+            // Se for um erro de negócio (bloqueio, senha errada, etc), não tenta novamente
+            const errorMsg = (err.message || String(err) || "").toLowerCase();
+            
+            // Se for um erro de conexão conhecido, retorna false para tentar novamente
+            const isConnectionError = 
+              errorMsg.includes("fetch") || 
+              errorMsg.includes("network") || 
+              errorMsg.includes("expirou") || 
+              errorMsg.includes("timeout") ||
+              errorMsg.includes("abort") ||
+              errorMsg.includes("connection") ||
+              errorMsg.includes("servidor instável");
+            
+            // Se NÃO for erro de conexão, assumimos que é erro de negócio (senha errada, etc)
+            const isBusinessError = !isConnectionError || 
+              errorMsg.includes("auth_error") ||
+              errorMsg.includes("bloqueada") || 
+              errorMsg.includes("incorret") || 
+              errorMsg.includes("inválid") ||
+              errorMsg.includes("não encontrado") ||
+              errorMsg.includes("não encontrada") ||
+              errorMsg.includes("invalid") ||
+              errorMsg.includes("not found") ||
+              errorMsg.includes("senha") ||
+              errorMsg.includes("matrícula") ||
+              errorMsg.includes("matricula") ||
+              errorMsg.includes("credenciais");
+            
+            console.log(`Erro na tentativa ${attempt}: "${errorMsg}". É erro de negócio? ${isBusinessError}`);
+            
+            if (isBusinessError) {
+              console.log("Interrompendo tentativas devido a erro de negócio.");
+              break;
+            }
+
+            if (attempt >= maxRetries) break;
+            
+            // Wait before next attempt
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
+
+        if (lastError) {
+          const errorMsg = (lastError.message || String(lastError) || "").toLowerCase();
+          
+          const isConnectionError = 
+            errorMsg.includes("fetch") || 
+            errorMsg.includes("network") || 
+            errorMsg.includes("expirou") || 
+            errorMsg.includes("timeout") ||
+            errorMsg.includes("abort") ||
+            errorMsg.includes("connection") ||
+            errorMsg.includes("servidor instável");
+
+          const isBusinessError = !isConnectionError || 
+            errorMsg.includes("auth_error") ||
+            errorMsg.includes("bloqueada") || 
+            errorMsg.includes("incorret") || 
+            errorMsg.includes("inválid") ||
+            errorMsg.includes("não encontrado") ||
+            errorMsg.includes("não encontrada") ||
+            errorMsg.includes("invalid") ||
+            errorMsg.includes("not found") ||
+            errorMsg.includes("senha") ||
+            errorMsg.includes("matrícula") ||
+            errorMsg.includes("matricula") ||
+            errorMsg.includes("credenciais");
+
+          if (isBusinessError) {
+            // Remove o prefixo AUTH_ERROR: se existir para mostrar uma mensagem limpa
+            const cleanMessage = lastError.message ? lastError.message.replace("AUTH_ERROR: ", "") : "Matrícula ou senha incorretos.";
+            setError(cleanMessage);
+          } else {
+            setError("Sem conexão com a internet ou servidor instável. Verifique sua rede e tente novamente.");
           }
           
-          console.log(`Tentativa de login ${attempt}/${maxRetries} para matrícula: ${matricula}`);
-          userData = await db.login(matricula, password);
-          lastError = null;
-          break; 
-        } catch (err: any) {
-          lastError = err;
-          console.error(`Erro na tentativa ${attempt}:`, err);
-          
-          if (attempt >= maxRetries) break;
-          
-          // Wait before next attempt
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      }
-
-      if (lastError && attempt >= maxRetries) {
-        setError("Sem conexão com a internet ou servidor instável. Verifique sua rede e tente novamente.");
-        setDebugInfo(lastError.message || "Erro de conexão");
-        setLoading(false);
-        return;
-      }
-
-      if (userData) {
-        console.log("Login retornado pelo DB:", userData);
-        if (userData.status === 'blocked') {
-          setError("Sua conta está bloqueada. Aguarde a liberação pelo administrador.");
+          setDebugInfo(lastError.message || "Erro de conexão");
           setLoading(false);
           return;
         }
-        console.log("Login bem-sucedido para:", userData.name);
-        if (userData.role === 'admin') {
-          setUser(userData);
-          setView("admin-dashboard");
-          setLoading(false);
-        } else {
-          setEditBirthState(userData.birth_state || "");
-          setEditNationality(userData.nationality || "");
-          setEditGender(userData.gender || "");
-          setEditMaritalStatus(userData.marital_status || "");
-          setEditShortName(userData.short_name || "");
-          setEditPhotoUrl(userData.photo_url || "");
-          setIsSimulatingLoading(true);
-          
-          setTimeout(() => {
-            setUser(userData);
-            if (userData.regularity && userData.regularity !== 'Regular') {
-              setView("financial");
-              setError("Sua conta possui pendências. Por favor, regularize sua situação financeira para acessar o portal completo.");
-            } else {
-              setView("dashboard");
-            }
-            fetchStudentData(userData.id);
-            setIsSimulatingLoading(false);
+
+        if (userData) {
+          console.log("Login retornado pelo DB:", userData);
+          if (userData.status === 'blocked') {
+            setError("Sua conta está bloqueada. Aguarde a liberação pelo administrador.");
             setLoading(false);
-          }, 3000);
+            return;
+          }
+          
+          console.log("Login bem-sucedido para:", userData.name);
+          if (userData.role === 'admin') {
+            setUser(userData);
+            setView("admin-dashboard");
+            setLoading(false);
+          } else {
+            // Fluxo de aluno com carregamento simulado
+            setEditBirthState(userData.birth_state || "");
+            setEditNationality(userData.nationality || "");
+            setEditGender(userData.gender || "");
+            setEditMaritalStatus(userData.marital_status || "");
+            setEditShortName(userData.short_name || "");
+            setEditPhotoUrl(userData.photo_url || "");
+            setIsSimulatingLoading(true);
+            
+            setTimeout(() => {
+              try {
+                setUser(userData);
+                if (userData.regularity && userData.regularity !== 'Regular') {
+                  setView("financial");
+                  setError("Sua conta possui pendências. Por favor, regularize sua situação financeira para acessar o portal completo.");
+                } else {
+                  setView("dashboard");
+                }
+                fetchStudentData(userData.id);
+              } catch (err) {
+                console.error("Erro ao processar dados do aluno:", err);
+              } finally {
+                setIsSimulatingLoading(false);
+                setLoading(false);
+              }
+            }, 3000);
+          }
+        } else {
+          console.warn("Login falhou: Credenciais incorretas.");
+          setError("Matrícula ou senha incorretos.");
+          setLoading(false);
         }
-      } else {
-        console.warn("Login falhou: Credenciais incorretas.");
-        setError("Matrícula ou senha incorretos.");
+      } catch (err: any) {
+        console.error("Erro fatal no handleLogin:", err);
+        setError("Ocorreu um erro inesperado. Tente novamente.");
         setLoading(false);
       }
     };
@@ -2426,7 +2910,16 @@ export default function App() {
       <ViewHeader title="Horário de Aulas" onBack={() => navigateTo("dashboard")} />
       <div className="p-6 space-y-6">
         {["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira"].map((day, dayIdx) => {
-          const dayClasses = data.schedule.filter(s => s.day_of_week === day);
+          const dayClasses = data.schedule.filter(s => {
+            const isSameDay = s.day_of_week === day;
+            const userCourse = user?.course?.toLowerCase();
+            const matchesCourse = s.course ? (
+              Array.isArray(s.course) 
+                ? s.course.some(c => c.toLowerCase() === userCourse)
+                : s.course.split(',').map((c: string) => c.trim().toLowerCase()).includes(userCourse || "")
+            ) : true; // If no course specified, show to everyone
+            return isSameDay && matchesCourse;
+          });
           if (dayClasses.length === 0) return null;
           return (
             <div key={`day-group-section-${day}-${dayIdx}`} className="space-y-3">
@@ -2503,7 +2996,7 @@ export default function App() {
                   <button 
                     onClick={() => {
                       navigator.clipboard.writeText(pay.pix_code);
-                      setShowToast({ message: "Código PIX copiado!", type: 'success' });
+                      setShowToast({ show: true, message: "Código PIX copiado!", type: 'success' });
                     }}
                     className="px-4 py-2 text-xs font-bold flex items-center gap-2 bg-[#00a2b1] text-white rounded-xl shadow-lg active:scale-95 transition-all"
                   >
@@ -2782,7 +3275,7 @@ export default function App() {
                   const subject = encodeURIComponent(`Cartão Virtual - ${user?.name}`);
                   const body = encodeURIComponent(`Olá,\n\nSegue os dados do meu Cartão Virtual da ${getCollegeName(appSettings)}:\n\nNome: ${user?.name}\nMatrícula: ${user?.matricula}\nCurso: ${user?.course}\n\nAtenciosamente.`);
                   window.location.href = `mailto:?subject=${subject}&body=${body}`;
-                  setShowToast(true);
+                  setShowToast({ show: true, message: "E-mail enviado!", type: 'success' });
                 }}
                 className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-3 active:scale-95 transition-all"
               >
@@ -2823,19 +3316,6 @@ export default function App() {
             </p>
           </div>
 
-          <AnimatePresence>
-            {showToast && (
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 50 }}
-                className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full flex items-center gap-2 shadow-2xl z-50"
-              >
-                <CheckCircle2 className="w-5 h-5 text-brand-teal" />
-                <span className="font-bold text-sm">Enviado com sucesso!</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </>
       ) : (
         <>
@@ -3182,7 +3662,7 @@ export default function App() {
                     const subject = encodeURIComponent(`Cartão Virtual - ${user?.name}`);
                     const body = encodeURIComponent(`Olá,\n\nSegue os dados do meu Cartão Virtual da ${getCollegeName(appSettings)}:\n\nNome: ${user?.name}\nMatrícula: ${user?.matricula}\nCurso: ${user?.course}\n\nAtenciosamente.`);
                     window.location.href = `mailto:?subject=${subject}&body=${body}`;
-                    setShowToast(true);
+                    setShowToast({ show: true, message: "E-mail enviado com sucesso!", type: 'success' });
                   }}
                   className={cn(
                     "w-full py-4 mt-4 font-bold flex items-center justify-center gap-2 transition-all active:scale-95",
@@ -3203,19 +3683,6 @@ export default function App() {
               </button>
             )}
 
-            <AnimatePresence>
-              {showToast && (
-                <motion.div
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 50 }}
-                  className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full flex items-center gap-2 shadow-2xl z-50"
-                >
-                  <CheckCircle2 className="w-5 h-5 text-brand-teal" />
-                  <span className="font-bold text-sm">Enviado com sucesso!</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </>
       )}
@@ -3261,42 +3728,20 @@ export default function App() {
   );
 
   const OnlineClassesView = () => {
-    const filteredClasses = data.online_classes
-      .filter(cls => {
-        // Strict filter by course - must match exactly
-        if (user?.course && cls.course !== user.course) return false;
-        
-        // If student has no course but class has one, also filter out for safety
-        if (!user?.course && cls.course) return false;
+    const limitedClasses = data.online_classes.filter(cls => {
+      if (!cls.course) return true;
+      const userCourse = user?.course?.toLowerCase();
+      if (!userCourse) return false;
 
-        // Filter by date (max 1 week)
-        if (cls.date) {
-          const classDate = new Date(cls.date + 'T00:00:00');
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          
-          const oneWeekFromNow = new Date();
-          oneWeekFromNow.setDate(today.getDate() + 7);
-          oneWeekFromNow.setHours(23, 59, 59, 999);
+      console.log("Filtrando Aula Online:", cls.discipline_name, "| Curso da Aula:", cls.course, "| Curso do Aluno:", user?.course);
 
-          return classDate >= today && classDate <= oneWeekFromNow;
-        }
-        return false;
-      })
-      .sort((a, b) => {
-        if (!a.date || !b.date) return 0;
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      });
-
-    // Group by date and take only one per day, max 5 days
-    const uniqueDays: string[] = [];
-    const limitedClasses = filteredClasses.filter(cls => {
-      if (uniqueDays.length >= 5) return false;
-      if (!uniqueDays.includes(cls.date)) {
-        uniqueDays.push(cls.date);
-        return true;
+      if (Array.isArray(cls.course)) {
+        return cls.course.some(c => c.toLowerCase() === userCourse);
       }
-      return false;
+      
+      // Handle comma-separated string from Supabase
+      const courses = cls.course.split(',').map((c: string) => c.trim().toLowerCase());
+      return courses.includes(userCourse);
     });
 
     return (
@@ -3311,7 +3756,7 @@ export default function App() {
                     <h3 className="font-bold text-slate-900">{cls.discipline_name}</h3>
                     <div className="flex flex-col gap-1 mt-1">
                       <p className="text-xs text-slate-500">
-                        {cls.date ? new Date(cls.date + 'T00:00:00').toLocaleDateString('pt-BR') : cls.day_of_week} • {cls.time}
+                        {cls.day_of_week ? (cls.day_of_week.split('-')[0].charAt(0).toUpperCase() + cls.day_of_week.split('-')[0].slice(1).toLowerCase()) : (cls.date ? new Date(cls.date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long' }).split('-')[0].charAt(0).toUpperCase() + new Date(cls.date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long' }).split('-')[0].slice(1).toLowerCase() : 'Sem data')} • {cls.time}
                       </p>
                       <div className="flex items-center gap-2">
                         {cls.mandatory && (
@@ -3319,9 +3764,25 @@ export default function App() {
                             Obrigatória
                           </span>
                         )}
-                        <span className="text-[8px] font-bold px-2 py-1 uppercase tracking-wider bg-slate-100 text-slate-500 rounded-lg">
-                          {cls.course}
-                        </span>
+                        {(() => {
+                          const courses = Array.isArray(cls.course) 
+                            ? cls.course 
+                            : (cls.course ? cls.course.split(',').map((c: string) => c.trim()) : []);
+                          
+                          if (courses.length === 0) {
+                            return (
+                              <span className="text-[8px] font-bold px-2 py-1 uppercase tracking-wider bg-slate-100 text-slate-500 rounded-lg">
+                                Não vinculado
+                              </span>
+                            );
+                          }
+
+                          return courses.map((c: string, i: number) => (
+                            <span key={`oc-course-tag-${cls.id}-${i}`} className="text-[8px] font-bold px-2 py-1 uppercase tracking-wider bg-slate-100 text-slate-500 rounded-lg">
+                              {c}
+                            </span>
+                          ));
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -3342,6 +3803,48 @@ export default function App() {
               Nenhuma aula online agendada para seu curso nesta semana.
             </div>
           )}
+
+          <div className="pt-6">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 ml-1">Links de Acesso Rápido</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={() => window.open('https://meet.google.com', '_blank')}
+                className="card p-4 flex flex-col items-center gap-3 hover:border-[#00a2b1] transition-all group"
+              >
+                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Monitor className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-bold text-slate-700">Google Meet</span>
+              </button>
+              <button 
+                onClick={() => window.open('https://zoom.us', '_blank')}
+                className="card p-4 flex flex-col items-center gap-3 hover:border-[#00a2b1] transition-all group"
+              >
+                <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Video className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-bold text-slate-700">Zoom</span>
+              </button>
+              <button 
+                onClick={() => window.open('https://teams.microsoft.com', '_blank')}
+                className="card p-4 flex flex-col items-center gap-3 hover:border-[#00a2b1] transition-all group"
+              >
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-bold text-slate-700">MS Teams</span>
+              </button>
+              <button 
+                onClick={() => window.open('https://classroom.google.com', '_blank')}
+                className="card p-4 flex flex-col items-center gap-3 hover:border-[#00a2b1] transition-all group"
+              >
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-bold text-slate-700">Classroom</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -3400,7 +3903,7 @@ export default function App() {
       setEditPhotoUrl(updated.photo_url || "");
       setIsEditingProfile(false);
       setSelectedPhotoFile(null);
-      setShowToast(true);
+      setShowToast({ show: true, message: "Perfil atualizado!", type: 'success' });
       console.log("Profile updated successfully!");
     } catch (err: any) {
       console.error("Erro ao salvar perfil:", err);
@@ -3420,34 +3923,68 @@ export default function App() {
       <div className="p-6 space-y-6">
         {/* Profile Header */}
         <div className="flex flex-col items-center">
-          <div className="w-32 h-32 rounded-full overflow-hidden border-4 shadow-xl mb-4 relative group border-[#00a2b1]">
-            <img 
-              src={editPhotoUrl || user?.photo_url || DEFAULT_AVATAR} 
-              alt="Profile" 
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
+          <div className="relative group">
+            <div className="w-32 h-32 rounded-full overflow-hidden border-4 shadow-xl mb-4 border-[#00a2b1] relative">
+              <img 
+                src={editPhotoUrl || user?.photo_url || DEFAULT_AVATAR} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+              {isEditingProfile && (
+                <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Upload className="w-8 h-8 text-white mb-1" />
+                  <span className="text-[10px] text-white font-bold uppercase">Alterar Foto</span>
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedPhotoFile(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setEditPhotoUrl(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
             {isEditingProfile && (
-              <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                <Upload className="w-8 h-8 text-white mb-1" />
-                <span className="text-[10px] text-white font-bold uppercase">Alterar Foto</span>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setSelectedPhotoFile(file);
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setEditPhotoUrl(reader.result as string);
-                      };
-                      reader.readAsDataURL(file);
-                    }
+              <div className="absolute -right-4 bottom-4 flex flex-col items-center gap-1">
+                <button 
+                  onClick={() => {
+                    const input = document.getElementById('profile-photo-input');
+                    if (input) input.click();
                   }}
-                />
-              </label>
+                  className="bg-white p-3 rounded-full shadow-xl border border-slate-100 text-[#00a2b1] hover:bg-slate-50 transition-all active:scale-90 flex items-center justify-center group"
+                  title="Trocar Foto"
+                >
+                  <Upload className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                  <input 
+                    id="profile-photo-input"
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedPhotoFile(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setEditPhotoUrl(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </button>
+                <span className="text-[9px] font-black text-[#00a2b1] bg-white px-2 py-0.5 rounded-full shadow-sm border border-slate-100 uppercase">Trocar Foto</span>
+              </div>
             )}
           </div>
           <h2 className="text-2xl font-black text-slate-800 text-center">{user?.name}</h2>
@@ -3809,6 +4346,22 @@ export default function App() {
         />
       </AnimatePresence>
       {renderView()}
+      <AnimatePresence>
+        {showToast.show && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className={cn(
+              "fixed bottom-10 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full flex items-center gap-2 shadow-2xl z-[100]",
+              showToast.type === 'error' ? "bg-red-600 text-white" : "bg-slate-800 text-white"
+            )}
+          >
+            {showToast.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5 text-[#00a2b1]" />}
+            <span className="font-bold text-sm">{showToast.message || "Operação realizada!"}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
     );
   } catch (err: any) {

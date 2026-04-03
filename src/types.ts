@@ -34,6 +34,7 @@ export interface Schedule {
   room: string;
   day_of_week: string;
   time: string;
+  course?: string | string[]; // Linked course(s)
 }
 
 export interface Grade {
@@ -87,7 +88,7 @@ export interface OnlineClass {
   id: number;
   discipline_id: number;
   discipline_name: string;
-  course: string;
+  course: string | string[]; // Can be linked to multiple courses
   link: string;
   date: string;
   day_of_week: string;
