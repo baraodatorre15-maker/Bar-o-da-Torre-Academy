@@ -2126,6 +2126,11 @@ export default function App() {
     };
 
     const handleForgotAction = async () => {
+      // Close mobile keyboard
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
       if (!forgotEmail) return;
       setIsForgotLoading(true);
       
@@ -2230,6 +2235,12 @@ export default function App() {
 
     const handleLogin = async (e: React.FormEvent) => {
       e.preventDefault();
+      
+      // Close mobile keyboard
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
       if (!matricula || !password) {
         setError("Por favor, preencha todos os campos.");
         return;
@@ -2539,6 +2550,11 @@ export default function App() {
     };
 
     const handleSignUp = async (signUpData: any) => {
+      // Close mobile keyboard
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
       console.log("handleSignUp started", signUpData);
 
       if (signUpData.password !== signUpData.confirmPassword) {
