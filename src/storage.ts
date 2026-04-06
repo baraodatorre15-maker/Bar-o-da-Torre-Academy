@@ -328,13 +328,18 @@ export const fileDB = {
   }
 };
 
-export const generateTuitionPayments = (studentId: number) => {
+export const generateTuitionPayments = (studentId: number, semester: number = 1) => {
   const payments = [];
   const baseId = Date.now() + Math.floor(Math.random() * 1000);
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
   
-  for (let month = 1; month <= 12; month++) {
+  // Semester 1: Jan-Jun (1-6)
+  // Semester 2: Jul-Dec (7-12)
+  const startMonth = semester === 1 ? 1 : 7;
+  const endMonth = semester === 1 ? 6 : 12;
+
+  for (let month = startMonth; month <= endMonth; month++) {
     const dueDateStr = `10/${month.toString().padStart(2, '0')}/${currentYear}`;
     
     // Payments before current month are "Pago", current and future are "Em aberto"
@@ -352,8 +357,11 @@ export const generateTuitionPayments = (studentId: number) => {
   return payments;
 };
 
+const removeAccents = (str: string) => 
+  str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
 export const getDisciplinesByCourse = (course: string) => {
-  const courseUpper = (course || "").toUpperCase();
+  const normalizedInput = removeAccents((course || "").toUpperCase());
   const database = getDB();
   const disciplines = database.disciplines || initialData.disciplines;
   
@@ -361,9 +369,10 @@ export const getDisciplinesByCourse = (course: string) => {
   const explicitDisciplines = disciplines.filter((d: any) => {
     if (!d.course) return false;
     if (Array.isArray(d.course)) {
-      return d.course.some((c: string) => c.toUpperCase() === courseUpper);
+      return d.course.some((c: string) => removeAccents(c.toUpperCase()) === normalizedInput);
     }
-    return d.course.toUpperCase() === courseUpper;
+    const courses = d.course.split(',').map((c: string) => removeAccents(c.trim().toUpperCase()));
+    return courses.includes(normalizedInput);
   });
   
   if (explicitDisciplines.length > 0) {
@@ -371,17 +380,17 @@ export const getDisciplinesByCourse = (course: string) => {
   }
   
   // Fallback to hardcoded mapping for initial data
-  if (courseUpper === "FARMÁCIA") {
+  if (normalizedInput === "FARMACIA") {
     return disciplines.filter((d: any) => [4, 5, 6, 7].includes(d.id));
-  } else if (courseUpper === "ENGENHARIA DE SOFTWARE") {
+  } else if (normalizedInput === "ENGENHARIA DE SOFTWARE") {
     return disciplines.filter((d: any) => [1, 2, 3, 11].includes(d.id));
-  } else if (courseUpper === "DIREITO") {
+  } else if (normalizedInput === "DIREITO") {
     return disciplines.filter((d: any) => [8].includes(d.id));
-  } else if (courseUpper === "ADMINISTRAÇÃO") {
+  } else if (normalizedInput === "ADMINISTRACAO") {
     return disciplines.filter((d: any) => [9].includes(d.id));
-  } else if (courseUpper === "PSICOLOGIA") {
+  } else if (normalizedInput === "PSICOLOGIA") {
     return disciplines.filter((d: any) => [10].includes(d.id));
-  } else if (courseUpper === "DESIGN GRÁFICO") {
+  } else if (normalizedInput === "DESIGN GRAFICO") {
     return disciplines.filter((d: any) => [2, 12].includes(d.id));
   }
   
@@ -412,6 +421,50 @@ export const generateRandomGrades = (studentId: number, course: string, semester
   });
 
   return grades;
+};
+
+export const generateExamsForStudent = (studentId: number, course: string, semester: number) => {
+  const exams: any[] = [];
+  const relevantDisciplines = getDisciplinesByCourse(course);
+  const currentYear = new Date().getFullYear();
+  
+  relevantDisciplines.forEach((disc, index) => {
+    // 2 exams per semester
+    // Sem 1: P1 in April (04), P2 in June (06)
+    // Sem 2: P1 in October (10), P2 in December (12)
+    
+    const p1Month = semester === 1 ? "04" : "10";
+    const p2Month = semester === 1 ? "06" : "12";
+    
+    const p1Day = (15 + (index % 10)).toString().padStart(2, '0');
+    const p2Day = (20 + (index % 10)).toString().padStart(2, '0');
+
+    // P1
+    exams.push({
+      id: Date.now() + (index * 2) + (studentId * 100),
+      discipline_id: disc.id,
+      discipline_name: disc.name,
+      date: `${currentYear}-${p1Month}-${p1Day}`,
+      time: "19:00",
+      type: "P1",
+      course: course,
+      link: "" // Presencial by default for generated ones
+    });
+
+    // P2
+    exams.push({
+      id: Date.now() + (index * 2) + 1 + (studentId * 100),
+      discipline_id: disc.id,
+      discipline_name: disc.name,
+      date: `${currentYear}-${p2Month}-${p2Day}`,
+      time: "19:00",
+      type: "P2",
+      course: course,
+      link: ""
+    });
+  });
+
+  return exams;
 };
 
 export const getDB = () => {
@@ -758,6 +811,17 @@ export const db = {
     database.online_classes = (database.online_classes || []).filter((c: any) => c.id !== id);
     saveDB(database);
   },
+  // Payments
+  updatePayment: async (id: number, payment: any) => {
+    const database = getDB();
+    const index = database.payments.findIndex((p: any) => p.id === id);
+    if (index !== -1) {
+      database.payments[index] = { ...database.payments[index], ...payment };
+      saveDB(database);
+      return database.payments[index];
+    }
+    throw new Error("Boleto não encontrado");
+  },
   // Disciplines
   getDisciplines: async () => {
     const database = getDB();
@@ -784,6 +848,34 @@ export const db = {
   deleteDiscipline: async (id: number) => {
     const database = getDB();
     database.disciplines = (database.disciplines || []).filter((d: any) => d.id !== id);
+    saveDB(database);
+  },
+  // Exams
+  getExams: async () => {
+    const database = getDB();
+    return database.exams || [];
+  },
+  addExam: async (exam: any) => {
+    const database = getDB();
+    if (!database.exams) database.exams = [];
+    const newExam = { ...exam, id: Date.now() };
+    database.exams.push(newExam);
+    saveDB(database);
+    return newExam;
+  },
+  updateExam: async (id: number, exam: any) => {
+    const database = getDB();
+    const index = database.exams.findIndex((e: any) => e.id === id);
+    if (index !== -1) {
+      database.exams[index] = { ...database.exams[index], ...exam };
+      saveDB(database);
+      return database.exams[index];
+    }
+    throw new Error("Prova não encontrada");
+  },
+  deleteExam: async (id: number) => {
+    const database = getDB();
+    database.exams = (database.exams || []).filter((e: any) => e.id !== id);
     saveDB(database);
   },
   getStudentDashboard: (studentId: number) => {

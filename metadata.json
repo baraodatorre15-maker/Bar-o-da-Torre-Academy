@@ -1,9 +1,5 @@
 {
   "name": "Barão da Torre Academy - Sistema Acadêmico",
   "description": "Plataforma completa para gestão acadêmica da Barão da Torre Academy.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone",
-    "geolocation"
-  ]
+  "requestFramePermissions": []
 }

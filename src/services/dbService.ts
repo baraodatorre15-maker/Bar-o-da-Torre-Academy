@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { User, DashboardData, AppSettings, Activity, Grade, Schedule, NewsItem, Announcement, Payment, Exam, OnlineClass } from '../types';
-import { generateTuitionPayments, generateRandomGrades, db } from '../storage';
+import { generateTuitionPayments, generateRandomGrades, generateExamsForStudent, db } from '../storage';
 
 const dataURLtoFile = (dataurl: string, filename: string) => {
   const arr = dataurl.split(',');
@@ -438,20 +438,29 @@ export const dbService = {
       throw studentError;
     }
 
-    // Clear existing
+    const semesterNum = Number(student.semester) || 1;
+
+    // Clear existing student-specific data
     console.log(`Deleting existing data for student ${studentId}...`);
     await supabase.from('payments').delete().eq('student_id', studentId);
     await supabase.from('grades').delete().eq('student_id', studentId);
 
     // Generate new
-    console.log(`Inserting new data for student ${studentId}...`);
-    const studentPayments = generateTuitionPayments(student.id).map(({ id, ...rest }) => rest);
+    console.log(`Inserting new data for student ${studentId} (Semester ${semesterNum})...`);
+    const studentPayments = generateTuitionPayments(student.id, semesterNum).map(({ id, ...rest }) => rest);
     const { error: payError } = await supabase.from('payments').insert(studentPayments);
     if (payError) console.error(`Error inserting payments for student ${studentId}:`, payError);
 
-    const studentGrades = generateRandomGrades(student.id, student.course, student.semester).map(({ id, ...rest }) => rest);
+    const studentGrades = generateRandomGrades(student.id, student.course, semesterNum).map(({ id, ...rest }) => rest);
     const { error: gradeError } = await supabase.from('grades').insert(studentGrades);
     if (gradeError) console.error(`Error inserting grades for student ${studentId}:`, gradeError);
+
+    // For exams, we generate them for the course if they don't exist or just add them
+    // To avoid duplicates in a real app we'd check, but for this "Generate Data" feature we'll just add them
+    console.log(`Generating exams for course ${student.course}...`);
+    const studentExams = generateExamsForStudent(student.id, student.course, semesterNum).map(({ id, ...rest }) => rest);
+    const { error: examError } = await supabase.from('exams').insert(studentExams);
+    if (examError) console.error(`Error inserting exams for student ${studentId}:`, examError);
 
     console.log(`Regeneration finished for student ${studentId}.`);
     return true;
@@ -512,6 +521,81 @@ export const dbService = {
       exams: (examsRes.data || []) as Exam[],
       online_classes: (onlineClassesRes.data || []) as OnlineClass[]
     };
+  },
+
+  // Payments
+  updatePayment: async (id: number, payment: any): Promise<Payment> => {
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+    const { data, error } = await supabase
+      .from('payments')
+      .update(payment)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update payment error:', error);
+      throw error;
+    }
+    return data as Payment;
+  },
+
+  // Exam Management
+  getExams: async (): Promise<Exam[]> => {
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+    const { data, error } = await supabase
+      .from('exams')
+      .select('*')
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Fetch exams error:', error);
+      return [];
+    }
+    return data as Exam[];
+  },
+
+  addExam: async (exam: Omit<Exam, 'id'>): Promise<Exam | null> => {
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+    const { data, error } = await supabase
+      .from('exams')
+      .insert([exam])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Add exam error:', error);
+      return null;
+    }
+    return data as Exam;
+  },
+
+  updateExam: async (examId: number, exam: Partial<Exam>): Promise<boolean> => {
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+    const { error } = await supabase
+      .from('exams')
+      .update(exam)
+      .eq('id', examId);
+
+    if (error) {
+      console.error('Update exam error:', error);
+      return false;
+    }
+    return true;
+  },
+
+  deleteExam: async (examId: number): Promise<boolean> => {
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+    const { error } = await supabase
+      .from('exams')
+      .delete()
+      .eq('id', examId);
+
+    if (error) {
+      console.error('Delete exam error:', error);
+      return false;
+    }
+    return true;
   },
 
   // Activities
@@ -662,17 +746,24 @@ export const dbService = {
     }
 
     console.log("User inserted successfully. ID:", data.id, "Generating initial data...");
-    // Generate initial data (payments and grades)
+    // Generate initial data (payments, grades and exams)
     try {
-      console.log("Generating payments...");
-      const studentPayments = generateTuitionPayments(data.id).map(({ id, ...rest }) => rest);
+      const semesterNum = Number(data.semester) || 1;
+      
+      console.log("Generating payments for semester:", semesterNum);
+      const studentPayments = generateTuitionPayments(data.id, semesterNum).map(({ id, ...rest }) => rest);
       const { error: payError } = await supabase.from('payments').insert(studentPayments);
       if (payError) console.error("Error inserting payments:", payError);
       
       console.log("Generating grades...");
-      const studentGrades = generateRandomGrades(data.id, data.course, 1).map(({ id, ...rest }) => rest);
+      const studentGrades = generateRandomGrades(data.id, data.course, semesterNum).map(({ id, ...rest }) => rest);
       const { error: gradeError } = await supabase.from('grades').insert(studentGrades);
       if (gradeError) console.error("Error inserting grades:", gradeError);
+
+      console.log("Generating exams...");
+      const studentExams = generateExamsForStudent(data.id, data.course, semesterNum).map(({ id, ...rest }) => rest);
+      const { error: examError } = await supabase.from('exams').insert(studentExams);
+      if (examError) console.error("Error inserting exams:", examError);
       
       console.log("Initial data generation step completed");
     } catch (genError) {

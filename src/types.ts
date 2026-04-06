@@ -82,6 +82,8 @@ export interface Exam {
   date: string;
   time: string;
   type: string;
+  course?: string | string[]; // Linked course(s)
+  link?: string; // Online exam link
 }
 
 export interface OnlineClass {

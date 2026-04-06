@@ -159,22 +159,8 @@ const LoginView = ({ appSettings, handleLogin, matricula, setMatricula, password
             </div>
           </div>
 
-          {/* Checkboxes & Forgot Password */}
-          <div className="flex justify-between items-start pt-2">
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div className="w-4 h-4 border border-white/50 rounded-sm flex items-center justify-center bg-white/10 group-hover:bg-white/20">
-                  <div className="w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <span className="text-xs text-white/90 font-medium">Graduação</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div className="w-4 h-4 border border-white/50 rounded-sm flex items-center justify-center bg-white/10 group-hover:bg-white/20">
-                  <div className="w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <span className="text-xs text-white/90 font-medium">Pós Graduação</span>
-              </label>
-            </div>
+          {/* Forgot Password */}
+          <div className="flex justify-end pt-2">
             <button type="button" onClick={onForgotClick} className="text-xs text-white/70 hover:text-white transition-colors underline underline-offset-2 text-right">
               Esqueci minha senha/matrícula
             </button>
@@ -245,6 +231,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
   const [editingOnlineClass, setEditingOnlineClass] = useState<OnlineClass | null>(null);
   const [onlineClasses, setOnlineClasses] = useState<OnlineClass[]>([]);
   const [disciplines, setDisciplines] = useState<Schedule[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [generatingData, setGeneratingData] = useState(false);
 
@@ -267,6 +254,17 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
   const [ocDayOfWeek, setOcDayOfWeek] = useState("Segunda-feira");
   const [ocTime, setOcTime] = useState("");
   const [ocMandatory, setOcMandatory] = useState(true);
+
+  // Exam Form State
+  const [showExamModal, setShowExamModal] = useState(false);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [exDisciplineId, setExDisciplineId] = useState<number | "">("");
+  const [exDisciplineName, setExDisciplineName] = useState("");
+  const [exCourses, setExCourses] = useState<string[]>([]);
+  const [exLink, setExLink] = useState("");
+  const [exDate, setExDate] = useState("");
+  const [exTime, setExTime] = useState("");
+  const [exType, setExType] = useState("P1");
   
   const handleToggleStatus = async (student: User) => {
     try {
@@ -346,12 +344,22 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
     }
   };
 
+  const fetchExams = async () => {
+    try {
+      const data = await db.getExams();
+      setExams(data || []);
+    } catch (err) {
+      console.error("Error fetching exams:", err);
+    }
+  };
+
   useEffect(() => {
     console.log("AdminDashboard mounted. Supabase configured:", isSupabaseConfigured);
     fetchStudents();
     fetchPayments();
     fetchOnlineClasses();
     fetchDisciplines();
+    fetchExams();
   }, []);
 
   const handleOpenEditOnlineClass = (oc: OnlineClass) => {
@@ -400,6 +408,73 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
     setDDay("Segunda-feira");
     setDTime("");
     setDCourses([]);
+  };
+
+  const handleOpenEditExam = (e: Exam) => {
+    setEditingExam(e);
+    setExDisciplineId(e.discipline_id);
+    setExDisciplineName(e.discipline_name);
+    setExCourses(e.course ? (Array.isArray(e.course) ? e.course : [e.course]) : []);
+    setExLink(e.link || "");
+    setExDate(e.date);
+    setExTime(e.time);
+    setExType(e.type);
+    setShowExamModal(true);
+  };
+
+  const handleCloseExamModal = () => {
+    setShowExamModal(false);
+    setEditingExam(null);
+    setExDisciplineId("");
+    setExDisciplineName("");
+    setExCourses([]);
+    setExLink("");
+    setExDate("");
+    setExTime("");
+    setExType("P1");
+  };
+
+  const handleSaveExam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // Ensure course is a string if it's an array, as the DB likely expects a string based on initialData
+      const courseValue = Array.isArray(exCourses) ? exCourses.join(', ') : (exCourses || "");
+      
+      const examData = {
+        discipline_id: Number(exDisciplineId),
+        discipline_name: exDisciplineName,
+        course: courseValue,
+        link: exLink,
+        date: exDate,
+        time: exTime,
+        type: exType
+      };
+
+      if (editingExam) {
+        await db.updateExam(editingExam.id, examData);
+        setShowToast({ show: true, message: "Prova atualizada!", type: 'success' });
+      } else {
+        await db.addExam(examData);
+        setShowToast({ show: true, message: "Prova agendada!", type: 'success' });
+      }
+      handleCloseExamModal();
+      fetchExams();
+    } catch (err) {
+      console.error("Error saving exam:", err);
+      alert("Erro ao salvar prova");
+    }
+  };
+
+  const handleDeleteExam = async (id: number) => {
+    if (window.confirm("Deseja realmente excluir esta prova?")) {
+      try {
+        await db.deleteExam(id);
+        fetchExams();
+        setShowToast({ show: true, message: "Prova excluída!", type: 'success' });
+      } catch (err) {
+        console.error("Error deleting exam:", err);
+      }
+    }
   };
 
   const handleSaveDiscipline = async (e: React.FormEvent) => {
@@ -673,6 +748,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
         <nav className="space-y-2 flex-1">
           <AdminNavItem icon={<Users />} label="Alunos" active={activeTab === "students"} onClick={() => setActiveTab("students")} />
           <AdminNavItem icon={<MonitorPlay />} label="Aulas Online" active={activeTab === "online-classes"} onClick={() => setActiveTab("online-classes")} />
+          <AdminNavItem icon={<FileText />} label="Provas Online" active={activeTab === "exams"} onClick={() => setActiveTab("exams")} />
           <AdminNavItem icon={<BookOpen />} label="Disciplinas" active={activeTab === "disciplines"} onClick={() => setActiveTab("disciplines")} />
           <AdminNavItem icon={<Bell />} label="Comunicados" active={activeTab === "announcements"} onClick={() => setActiveTab("announcements")} />
           <AdminNavItem icon={<DollarSign />} label="Financeiro" active={activeTab === "financial"} onClick={() => setActiveTab("financial")} />
@@ -691,6 +767,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
             <h2 className="text-2xl font-bold text-slate-900">
               {activeTab === "students" ? "Gerenciamento de Alunos" : 
                activeTab === "online-classes" ? "Aulas Online EAD" :
+               activeTab === "exams" ? "Provas Online" :
                activeTab === "disciplines" ? "Disciplinas" :
                activeTab === "announcements" ? "Comunicados" : 
                activeTab === "settings" ? "Configurações" : "Financeiro"}
@@ -701,9 +778,9 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {(activeTab === "students" || activeTab === "financial" || activeTab === "online-classes" || activeTab === "disciplines") && (
+            {(activeTab === "students" || activeTab === "financial" || activeTab === "online-classes" || activeTab === "exams" || activeTab === "disciplines") && (
               <>
-                {(activeTab !== "online-classes" && activeTab !== "disciplines") && (
+                {(activeTab !== "online-classes" && activeTab !== "exams" && activeTab !== "disciplines") && (
                   <button 
                     onClick={handleGenerateFictionalData}
                     disabled={generatingData}
@@ -736,6 +813,14 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                     className="flex items-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors bg-[#00a2b1] text-white hover:bg-[#008f9d]"
                   >
                     <Plus className="w-5 h-5" /> Nova Disciplina
+                  </button>
+                )}
+                {activeTab === "exams" && (
+                  <button 
+                    onClick={() => setShowExamModal(true)}
+                    className="flex items-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors bg-[#00a2b1] text-white hover:bg-[#008f9d]"
+                  >
+                    <Plus className="w-5 h-5" /> Agendar Prova
                   </button>
                 )}
               </>
@@ -941,6 +1026,82 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : activeTab === "exams" ? (
+          <div className="space-y-6">
+            <div className="card p-0 overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="border-b bg-[#00a2b1] text-white border-[#00a2b1]">
+                  <tr>
+                    <th className="p-4 text-xs font-bold uppercase">Disciplina</th>
+                    <th className="p-4 text-xs font-bold uppercase">Curso</th>
+                    <th className="p-4 text-xs font-bold uppercase">Data/Hora</th>
+                    <th className="p-4 text-xs font-bold uppercase">Tipo</th>
+                    <th className="p-4 text-xs font-bold uppercase">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {exams.map((exam, index) => (
+                    <tr key={`admin-exam-${exam.id || index}`} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-700">{exam.discipline_name}</span>
+                          {exam.link && (
+                            <span className="text-[10px] text-slate-400 truncate max-w-[200px]">{exam.link}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-1">
+                          {Array.isArray(exam.course) ? (
+                            exam.course.map((c, i) => (
+                              <span key={`exam-course-tag-${exam.id}-${i}`} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[8px] font-bold uppercase">
+                                {c}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[8px] font-bold uppercase">
+                              {exam.course || "Todos"}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 text-sm text-slate-600">
+                        {new Date(exam.date + 'T00:00:00').toLocaleDateString('pt-BR')} às {exam.time}
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase">
+                          {exam.type}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleOpenEditExam(exam)}
+                            className="p-2 text-[#00a2b1] hover:bg-[#00a2b1]/10 rounded-lg transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteExam(exam.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {exams.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-12 text-center text-slate-400">
+                        Nenhuma prova agendada.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1575,6 +1736,117 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
           </div>
         )}
       </AnimatePresence>
+
+      {/* Add/Edit Exam Modal */}
+      <AnimatePresence>
+        {showExamModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={handleCloseExamModal}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl max-h-[90vh] overflow-y-auto modal-container"
+            >
+              <h3 className="text-2xl font-bold text-slate-900 mb-6">
+                {editingExam ? "Editar Prova" : "Agendar Nova Prova"}
+              </h3>
+              
+              <form onSubmit={handleSaveExam} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Disciplina</label>
+                  <select 
+                    className="input-field" 
+                    value={exDisciplineId} 
+                    onChange={e => {
+                      const id = Number(e.target.value);
+                      setExDisciplineId(id);
+                      const d = disciplines.find(disc => disc.id === id);
+                      if (d) {
+                        setExDisciplineName(d.name);
+                        setExCourses(d.course ? (Array.isArray(d.course) ? d.course : [d.course]) : []);
+                      }
+                    }} 
+                    required
+                  >
+                    <option value="">Selecione uma disciplina</option>
+                    {disciplines.map(d => (
+                      <option key={`ex-disc-opt-${d.id}`} value={d.id}>{d.name} ({Array.isArray(d.course) ? d.course.join(', ') : d.course})</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Cursos Vinculados (Confirmar)</label>
+                  <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                    {COURSES.map((c, i) => (
+                      <label key={`ex-course-check-${c}-${i}`} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded transition-colors">
+                        <input 
+                          type="checkbox" 
+                          checked={exCourses.includes(c)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setExCourses([...exCourses, c]);
+                            } else {
+                              setExCourses(exCourses.filter(item => item !== c));
+                            }
+                          }}
+                          className="w-4 h-4 text-[#00a2b1] rounded focus:ring-[#00a2b1]"
+                        />
+                        <span className="text-xs font-medium text-slate-700">{c}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Link da Prova (Opcional para Online)</label>
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={exLink} 
+                    onChange={e => setExLink(e.target.value)} 
+                    placeholder="https://link-da-prova.com" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Data</label>
+                    <input type="date" className="input-field" value={exDate} onChange={e => setExDate(e.target.value)} required />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Hora</label>
+                    <input type="time" className="input-field" value={exTime} onChange={e => setExTime(e.target.value)} required />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Tipo de Avaliação</label>
+                  <select className="input-field" value={exType} onChange={e => setExType(e.target.value)} required>
+                    <option value="P1">P1 - Primeira Prova</option>
+                    <option value="P2">P2 - Segunda Prova</option>
+                    <option value="Final">Prova Final</option>
+                    <option value="Recuperação">Recuperação</option>
+                    <option value="Trabalho">Trabalho</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button type="button" onClick={handleCloseExamModal} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition-colors">
+                    Cancelar
+                  </button>
+                  <button type="submit" className="flex-1 btn-primary py-3">
+                    {editingExam ? "Salvar Alterações" : "Agendar Prova"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -2187,8 +2459,8 @@ export default function App() {
 
       if (!dashboardData) return;
       
-      // Auto-generate data if grades are empty
-      if (dashboardData.grades.length === 0) {
+      // Auto-generate data if grades or payments are empty (indicates uninitialized student)
+      if (dashboardData.grades.length === 0 || dashboardData.payments.length === 0) {
         setLoading(true);
         try {
           await db.generateStudentFictionalData(id);
@@ -2231,6 +2503,43 @@ export default function App() {
       }
 
       setData(dashboardData);
+
+      // Auto-update past due payments to "Pago" (Fictional logic for demo)
+      if (dashboardData.payments && dashboardData.payments.length > 0) {
+        const now = new Date();
+        const currentMonth = now.getMonth(); // 0-11
+        const currentYear = now.getFullYear();
+        let hasUpdates = false;
+        
+        const updatedPayments = await Promise.all(dashboardData.payments.map(async (payment: any) => {
+          if (payment.status === 'Em aberto') {
+            const dateParts = payment.due_date.split('/');
+            if (dateParts.length === 3) {
+              const day = parseInt(dateParts[0]);
+              const month = parseInt(dateParts[1]);
+              const year = parseInt(dateParts[2]);
+              
+              // If due date is in a previous month of the same year OR in a previous year
+              if (year < currentYear || (year === currentYear && (month - 1) < currentMonth)) {
+                try {
+                  console.log(`Sistema: Auto-pagando boleto vencido (${payment.due_date}) para manter portal em dia.`);
+                  const updated = await db.updatePayment(payment.id, { status: 'Pago' });
+                  hasUpdates = true;
+                  return updated;
+                } catch (err) {
+                  console.error("Erro ao auto-pagar boleto:", err);
+                  return payment;
+                }
+              }
+            }
+          }
+          return payment;
+        }));
+
+        if (hasUpdates) {
+          setData({ ...dashboardData, payments: updatedPayments });
+        }
+      }
     };
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -2769,6 +3078,7 @@ export default function App() {
       {/* Quick Links Grid */}
       <div className="p-6 grid gap-4 grid-cols-2 -mt-6">
         <DashboardCard icon={<MonitorPlay />} label="Aulas Online EAD" color="bg-blue-500" onClick={() => navigateTo("online-classes")} />
+        <DashboardCard icon={<FileText />} label="Provas Online" color="bg-blue-500" onClick={() => navigateTo("exams")} />
         <DashboardCard icon={<GraduationCap />} label="Notas e Faltas" color="bg-blue-500" onClick={() => navigateTo("grades")} />
         <DashboardCard icon={<Calendar />} label="Horario de Aulas" color="bg-blue-500" onClick={() => navigateTo("schedule")} />
         <DashboardCard icon={<Bell />} label="Comunicados" color="bg-blue-500" onClick={() => navigateTo("announcements")} />
@@ -2790,6 +3100,7 @@ export default function App() {
       if (label.includes("Financeiro")) return "text-blue-500";
       if (label.includes("Atividade")) return "text-blue-600";
       if (label.includes("Online")) return "text-orange-500";
+      if (label.includes("Provas")) return "text-red-500";
       return "text-blue-600";
     };
 
@@ -2985,52 +3296,82 @@ export default function App() {
   );
 
   const FinancialView = () => (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 pb-20">
       <ViewHeader title="Financeiro" onBack={() => navigateTo("dashboard")} />
-      <div className="p-6 space-y-4">
-        {data.payments.length > 0 ? (
-          data.payments.map((pay, index) => (
-            <div key={`payment-item-${pay.id || index}-${index}`} className="card">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">Vencimento</p>
-                  <p className="font-bold text-slate-900">{pay.due_date}</p>
+      <div className="p-4 md:p-8 max-w-2xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Extrato Financeiro</h1>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Mensalidades e Taxas</p>
+        </div>
+
+        <div className="bg-white rounded-[32px] shadow-xl border border-slate-100 overflow-hidden">
+          {data.payments.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {[...data.payments]
+                .sort((a, b) => {
+                  const [dayA, monthA, yearA] = a.due_date.split('/').map(Number);
+                  const [dayB, monthB, yearB] = b.due_date.split('/').map(Number);
+                  const dateA = new Date(yearA, monthA - 1, dayA).getTime();
+                  const dateB = new Date(yearB, monthB - 1, dayB).getTime();
+                  return dateA - dateB;
+                })
+                .map((pay, index) => (
+                  <div key={`payment-item-${pay.id || index}-${index}`} className="p-6 hover:bg-slate-50/50 transition-colors">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm",
+                        pay.status === "Pago" ? "bg-emerald-50 text-emerald-500" : "bg-orange-50 text-orange-500"
+                      )}>
+                        {pay.status === "Pago" ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Vencimento</p>
+                        <p className="font-bold text-slate-900">{pay.due_date}</p>
+                      </div>
+                    </div>
+                    <span className={cn(
+                      "px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-tighter",
+                      pay.status === "Pago" ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
+                    )}>
+                      {pay.status}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-end pl-13">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Valor da Parcela</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm font-bold text-slate-400">R$</span>
+                        <span className="text-2xl font-black text-slate-900">{pay.amount.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    </div>
+                    
+                    {pay.status !== "Pago" && (
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(pay.pix_code);
+                          setShowToast({ show: true, message: "Código PIX copiado!", type: 'success' });
+                        }}
+                        className="px-5 py-2.5 text-xs font-black uppercase tracking-widest flex items-center gap-2 bg-[#00a2b1] text-white rounded-2xl shadow-lg active:scale-95 transition-all hover:bg-[#008a96]"
+                      >
+                        <Copy className="w-4 h-4" /> Copiar PIX
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <span className={cn(
-                  "px-3 py-1 text-[10px] font-bold uppercase rounded-full",
-                  pay.status === "Pago" ? "bg-[#00a2b1]/10 text-[#00a2b1]" : "bg-orange-100 text-orange-700"
-                )}>
-                  {pay.status}
-                </span>
-              </div>
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">Valor</p>
-                  <p className="text-2xl font-bold text-slate-900">R$ {pay.amount.toFixed(2)}</p>
-                </div>
-                {pay.status !== "Pago" && (
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(pay.pix_code);
-                      setShowToast({ show: true, message: "Código PIX copiado!", type: 'success' });
-                    }}
-                    className="px-4 py-2 text-xs font-bold flex items-center gap-2 bg-[#00a2b1] text-white rounded-xl shadow-lg active:scale-95 transition-all"
-                  >
-                    <Copy className="w-4 h-4" /> Copiar PIX
-                  </button>
-                )}
-              </div>
+              ))}
             </div>
-          ))
-        ) : (
-          <div className="card text-center py-12">
-            <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4 bg-slate-50 rounded-full">
-              <FileCheck className="w-8 h-8 text-slate-300" />
+          ) : (
+            <div className="text-center py-20 px-6">
+              <div className="w-20 h-20 bg-slate-50 text-slate-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                <FileCheck className="w-10 h-10" />
+              </div>
+              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Tudo em dia!</h3>
+              <p className="text-sm text-slate-400 mt-2">Nenhum boleto pendente ou futuro encontrado em sua conta.</p>
             </div>
-            <p className="text-slate-500 font-medium">Nenhum boleto pendente ou futuro encontrado.</p>
-            <p className="text-slate-400 text-xs mt-1">Boletos vencidos não são exibidos.</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -3550,10 +3891,6 @@ export default function App() {
                     </div>
                     
                     <div className="mt-auto flex justify-end items-end">
-                      <div className="text-right opacity-40">
-                        <p className="text-[5px] font-bold text-slate-400 uppercase tracking-tighter">Documento Digital</p>
-                        <p className="text-[5px] font-bold text-slate-400 uppercase tracking-tighter">Válido em todo território nacional</p>
-                      </div>
                     </div>
                   </>
                 ) : (
@@ -3652,8 +3989,8 @@ export default function App() {
                 <div className="p-4 mb-6 bg-slate-50 rounded-3xl border border-slate-100">
                   <QRCodeSVG value={`STUDENT:${user?.matricula}`} size={180} />
                 </div>
-                <p className="text-slate-400 text-sm text-center max-w-xs mb-8">
-                  Apresente este QR Code para acesso às dependências da Academy e validação de meia-entrada.
+                <p className="text-slate-400 text-[10px] text-center max-w-xs mb-8 italic">
+                  Apresente este QR Code para acesso às dependências da Academy. Este documento é de uso interno e não substitui a Carteira de Identificação Estudantil (CIE), não garantindo benefícios legais como meia-entrada.
                 </p>
               </>
             )}
@@ -3705,43 +4042,104 @@ export default function App() {
     </div>
   );
 
-  const ExamsView = () => (
-    <div className="min-h-screen bg-slate-50">
-      <ViewHeader title="Agenda de Provas" onBack={() => navigateTo("dashboard")} />
-      <div className="p-6 space-y-4">
-        {data.exams.length > 0 ? (
-          data.exams.map((exam, index) => (
-            <div key={`exam-row-${exam.id || index}-${index}`} className="card">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-bold text-slate-900">{exam.discipline_name}</h3>
-                  <p className="text-xs text-slate-500 mt-1">Avaliação {exam.type}</p>
+  const ExamsView = () => {
+    const removeAccents = (str: string) => 
+      str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    const filteredExams = data.exams.filter(exam => {
+      // Course filter
+      if (exam.course) {
+        const userCourse = removeAccents((user?.course || "").toLowerCase());
+        if (userCourse) {
+          let hasCourse = false;
+          if (Array.isArray(exam.course)) {
+            hasCourse = exam.course.some(c => removeAccents(c.toLowerCase()) === userCourse);
+          } else {
+            // Handle potential JSON string or comma-separated string
+            let courseStr = exam.course;
+            // If it looks like a JSON array string, clean it up
+            if (courseStr.startsWith('[') && courseStr.endsWith(']')) {
+              try {
+                const parsed = JSON.parse(courseStr);
+                if (Array.isArray(parsed)) {
+                  hasCourse = parsed.some(c => removeAccents(c.toLowerCase()) === userCourse);
+                }
+              } catch (e) {
+                // Not JSON, just clean it up
+                courseStr = courseStr.replace(/[\[\]"]/g, '');
+              }
+            }
+            
+            if (!hasCourse) {
+              const courses = courseStr.split(',').map((c: string) => 
+                removeAccents(c.trim().replace(/[\[\]"]/g, '').toLowerCase())
+              );
+              hasCourse = courses.includes(userCourse);
+            }
+          }
+          if (!hasCourse) return false;
+        }
+      }
+
+      // Date filter: only show future exams (today or later)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const examDate = new Date(exam.date + 'T00:00:00');
+      return examDate >= today;
+    });
+
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <ViewHeader title="Provas Online" onBack={() => navigateTo("dashboard")} />
+        <div className="p-6 space-y-4">
+          {filteredExams.length > 0 ? (
+            filteredExams.map((exam, index) => (
+              <div key={`exam-row-${exam.id || index}-${index}`} className="card">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-bold text-slate-900">{exam.discipline_name}</h3>
+                    <p className="text-xs text-slate-500 mt-1">Avaliação {exam.type}</p>
+                  </div>
+                  <div className="px-3 py-1 bg-[#00a2b1]/10 text-[#00a2b1] rounded-xl">
+                    <p className="text-[10px] font-bold uppercase">Data</p>
+                    <p className="text-sm font-bold">{new Date(exam.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                  </div>
                 </div>
-                <div className="px-3 py-1 bg-[#00a2b1]/10 text-[#00a2b1] rounded-xl">
-                  <p className="text-[10px] font-bold uppercase">Data</p>
-                  <p className="text-sm font-bold">{new Date(exam.date).toLocaleDateString('pt-BR')}</p>
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-xs font-medium">{exam.time}h</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-500">
+                      {exam.link ? (
+                        <Wifi className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4" />
+                      )}
+                      <span className="text-xs font-medium">{exam.link ? "Online" : "Presencial"}</span>
+                    </div>
+                  </div>
+                  {exam.link && (
+                    <button 
+                      onClick={() => window.open(exam.link, '_blank')}
+                      className="px-4 py-2 bg-[#00a2b1] text-white text-[10px] font-bold uppercase rounded-lg shadow-lg active:scale-95 transition-all flex items-center gap-2"
+                    >
+                      <ExternalLink className="w-3 h-3" /> Acessar Prova
+                    </button>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
-                <div className="flex items-center gap-2 text-slate-500">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-xs font-medium">{exam.time}h</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500">
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-xs font-medium">Presencial</span>
-                </div>
-              </div>
+            ))
+          ) : (
+            <div className="card text-center py-12 text-slate-400">
+              Nenhuma prova agendada para seu curso.
             </div>
-          ))
-        ) : (
-          <div className="card text-center py-12 text-slate-400">
-            Nenhuma prova agendada.
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const OnlineClassesView = () => {
     const limitedClasses = data.online_classes.filter(cls => {

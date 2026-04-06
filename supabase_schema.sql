@@ -115,6 +115,8 @@ CREATE TABLE exams (
   date TEXT,
   time TEXT,
   type TEXT,
+  course TEXT,
+  link TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
