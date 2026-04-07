@@ -54,6 +54,7 @@ import {
   Edit2,
   Trash2
 } from "lucide-react";
+import { validateCPF, formatCPF } from "./utils/validation";
 import { motion, AnimatePresence } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
 import { clsx, type ClassValue } from "clsx";
@@ -2176,17 +2177,18 @@ const SignUpModal = ({
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">CPF</label>
-                  <input 
-                    type="text" 
-                    required
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                    placeholder="000.000.000-00"
-                    value={localCPF}
-                    onChange={(e) => setLocalCPF(e.target.value)}
-                  />
-                </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">CPF</label>
+                    <input 
+                      type="text" 
+                      required
+                      maxLength={14}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                      placeholder="000.000.000-00"
+                      value={localCPF}
+                      onChange={(e) => setLocalCPF(formatCPF(e.target.value))}
+                    />
+                  </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Data Nasc.</label>
                   <input 
@@ -2883,6 +2885,13 @@ export default function App() {
             // Remove o prefixo AUTH_ERROR: se existir para mostrar uma mensagem limpa
             const cleanMessage = lastError.message ? lastError.message.replace("AUTH_ERROR: ", "") : "Matrícula ou senha incorretos.";
             setError(cleanMessage);
+            
+            // Adiciona informação extra de debug para o usuário
+            if (lastError.message && lastError.message.includes("RLS")) {
+              setDebugInfo("Erro de RLS: O banco bloqueou a leitura. Verifique as políticas no Supabase.");
+            } else {
+              setDebugInfo("Detalhe técnico: " + (lastError.message || "Erro desconhecido"));
+            }
           } else {
             setError("Sem conexão com a internet ou servidor instável. Verifique sua rede e tente novamente.");
           }
@@ -3102,6 +3111,15 @@ export default function App() {
         setShowToast({ 
           show: true, 
           message: "A senha deve ter pelo menos 6 dígitos.", 
+          type: 'error' 
+        });
+        return;
+      }
+
+      if (!validateCPF(signUpData.cpf)) {
+        setShowToast({ 
+          show: true, 
+          message: "CPF inválido. Verifique o número digitado.", 
           type: 'error' 
         });
         return;
