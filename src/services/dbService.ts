@@ -28,33 +28,31 @@ export const dbService = {
     console.log(`Attempting login for matricula: ${matricula}`);
     
     const cleanMatricula = matricula.trim();
-    console.log(`[DEBUG] Login: Iniciando busca para matrícula: "${cleanMatricula}"`);
+    console.log(`[SECURITY] Login: Iniciando busca segura para matrícula: "${cleanMatricula}"`);
     
-    // Teste rápido: Verificar se a tabela está acessível (RLS check)
-    const { error: rlsCheck } = await supabase.from('users').select('id').limit(1);
-    if (rlsCheck) {
-      console.error('[DEBUG] Login: Erro de acesso à tabela (Provável RLS):', rlsCheck.message);
-    }
-
     // 1. Find user by matricula to get their email
-    // Usamos .eq em vez de .ilike para ser mais compatível com tipos numéricos
+    // Selecionamos APENAS o e-mail e o status para minimizar exposição de dados antes da senha
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('*')
+      .select('email, status')
       .eq('matricula', cleanMatricula)
       .maybeSingle();
 
     if (userError) {
-      console.error('[DEBUG] Login: Erro ao buscar matrícula:', userError.message);
-      throw new Error(`AUTH_ERROR: Erro no banco de dados: ${userError.message}`);
+      console.error('[SECURITY] Erro de acesso ao banco:', userError.message);
+      throw new Error("Erro de comunicação segura com o servidor.");
     }
 
     if (!userData) {
-      console.error(`[DEBUG] Login: Nenhuma matrícula "${cleanMatricula}" encontrada na tabela 'users'.`);
-      throw new Error("AUTH_ERROR: Matrícula não encontrada.");
+      console.warn(`[SECURITY] Tentativa de login com matrícula inexistente.`);
+      throw new Error("AUTH_ERROR: Matrícula ou senha incorretos.");
     }
 
-    console.log(`[DEBUG] Login: Matrícula encontrada! E-mail vinculado: ${userData.email}. Tentando autenticação...`);
+    if (userData.status === 'blocked') {
+      throw new Error("AUTH_ERROR: Sua conta está bloqueada. Aguarde a liberação pelo administrador.");
+    }
+
+    console.log(`[SECURITY] Matrícula validada. Verificando credenciais...`);
 
     // 2. Sign in with Supabase Auth using the email found
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -63,17 +61,24 @@ export const dbService = {
     });
 
     if (authError) {
-      console.error('[DEBUG] Login: Falha na autenticação Supabase:', authError.message);
-      
-      if (authError.message.toLowerCase().includes("email not confirmed")) {
-        throw new Error("AUTH_ERROR: E-mail não confirmado. Verifique sua caixa de entrada.");
-      }
-      
-      throw new Error("AUTH_ERROR: Senha incorreta.");
+      console.error('[SECURITY] Falha na autenticação:', authError.message);
+      throw new Error("AUTH_ERROR: Matrícula ou senha incorretos.");
+    }
+
+    // 3. Agora que o usuário está autenticado, buscamos o perfil completo
+    const { data: fullProfile, error: profileError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', userData.email)
+      .single();
+
+    if (profileError) {
+      console.error('[SECURITY] Erro ao carregar perfil pós-login:', profileError.message);
+      throw new Error("Erro ao carregar dados do perfil.");
     }
     
-    console.log('[DEBUG] Login: Sucesso total para:', userData.name);
-    return userData as User;
+    console.log('[SECURITY] Login autorizado para:', fullProfile.name);
+    return fullProfile as User;
   },
 
   forgotPassword: async (email: string): Promise<{ message?: string; error?: string }> => {
