@@ -928,7 +928,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {onlineClasses.map((oc, index) => (
-                    <tr key={`admin-oc-${oc.id || index}`} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`admin-oc-${oc.id || index}-${index}`} className="hover:bg-slate-50 transition-colors">
                       <td className="p-4">
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-700">{oc.discipline_name}</span>
@@ -987,7 +987,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {disciplines.map((d, index) => (
-                    <tr key={`admin-d-${d.id || index}`} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`admin-d-${d.id || index}-${index}`} className="hover:bg-slate-50 transition-colors">
                       <td className="p-4 font-bold text-slate-700">{d.name}</td>
                       <td className="p-4 text-sm text-slate-600">{d.professor}</td>
                       <td className="p-4">
@@ -1045,7 +1045,7 @@ const AdminDashboard = ({ appSettings, setAppSettings, handleLogout, setShowToas
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {exams.map((exam, index) => (
-                    <tr key={`admin-exam-${exam.id || index}`} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`admin-exam-${exam.id || index}-${index}`} className="hover:bg-slate-50 transition-colors">
                       <td className="p-4">
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-700">{exam.discipline_name}</span>
@@ -1890,6 +1890,8 @@ const ForgotRecoveryModal = ({
   setType, 
   email, 
   setEmail, 
+  otp,
+  setOtp,
   result, 
   isLoading, 
   onAction 
@@ -1975,6 +1977,38 @@ const ForgotRecoveryModal = ({
                 {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "PROSSEGUIR"}
               </button>
             </div>
+          ) : step === 'otp' ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setStep('input')} className="p-2 bg-slate-100 rounded-xl">
+                  <ArrowLeft className="w-4 h-4 text-slate-600" />
+                </button>
+                <h4 className="font-bold text-slate-700">Código de Verificação</h4>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">Digite o código de 6 dígitos enviado para <strong>{email}</strong>.</p>
+              
+              <div className="space-y-2">
+                <div className="relative">
+                  <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <input 
+                    type="text" 
+                    maxLength={6}
+                    className="input-field pl-12 h-14 rounded-2xl text-center text-2xl font-black tracking-[10px]"
+                    placeholder="000000"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={onAction}
+                disabled={otp.length !== 6 || isLoading}
+                className="w-full h-14 bg-green-600 text-white font-bold rounded-2xl shadow-lg shadow-green-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "VERIFICAR CÓDIGO"}
+              </button>
+            </div>
           ) : (
             <div className="text-center space-y-6 py-4">
               {result?.success ? (
@@ -2039,6 +2073,17 @@ const SignUpModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("SignUpModal: Formulário submetido. Dados locais:", {
+      name: localName,
+      email: localEmail,
+      course: localCourse
+    });
+    
+    if (!localCourse) {
+      console.warn("SignUpModal: Curso não selecionado.");
+      return;
+    }
+
     onSubmit({
       name: localName,
       email: localEmail,
@@ -2201,12 +2246,16 @@ const SignUpModal = ({
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Senha</label>
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Senha</label>
+                  <span className="text-[8px] font-bold text-blue-500 uppercase">Mínimo 6 dígitos</span>
+                </div>
                 <input 
                   type="password" 
                   required
+                  minLength={6}
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl h-12 px-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                  placeholder="Crie uma senha"
+                  placeholder="Crie uma senha segura"
                   value={localPassword}
                   onChange={(e) => setLocalPassword(e.target.value)}
                 />
@@ -2237,6 +2286,76 @@ const SignUpModal = ({
     </motion.div>
   );
 };
+
+// Componentes de Overlay movidos para fora para evitar remounting flashes
+const LoadingOverlay = ({ appSettings, onForceEnter }: { appSettings: any, onForceEnter: () => void }) => {
+  const [showFallback, setShowFallback] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setShowFallback(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+      className="fixed inset-0 bg-[#00a2b1] z-[100] flex flex-col items-center justify-center p-6 text-center"
+    >
+      <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-4 shadow-2xl mb-8">
+        <img src={appSettings?.logo_url || "https://cdn-icons-png.flaticon.com/512/3135/3135810.png"} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+      </div>
+      
+      <div className="relative">
+        <Loader2 className="w-10 h-10 text-white animate-spin" />
+      </div>
+      
+      <h3 className="mt-6 text-2xl font-black text-white uppercase tracking-tight">
+        {getCollegeName(appSettings)}
+      </h3>
+      <p className="mt-2 text-white/80 text-sm font-bold uppercase tracking-widest">
+        {showFallback ? "Finalizando carregamento..." : "Carregando seu portal..."}
+      </p>
+      
+      <div className="mt-10 w-40 h-2 bg-white/20 rounded-full overflow-hidden">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: "100%" }}
+          transition={{ duration: 3, ease: "easeInOut" }}
+          className="h-full bg-orange-500"
+        />
+      </div>
+
+      {showFallback && (
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={onForceEnter}
+          className="mt-12 px-6 py-3 bg-white/10 hover:bg-white/20 text-white text-xs font-bold uppercase tracking-widest rounded-full transition-all border border-white/20"
+        >
+          Demorando muito? Clique aqui para entrar
+        </motion.button>
+      )}
+    </motion.div>
+  );
+};
+
+const DashboardLoadingOverlay = () => (
+  <motion.div 
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.2 }}
+    className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm"
+  >
+    <div className="bg-white p-8 rounded-3xl shadow-2xl border border-slate-100 flex flex-col items-center">
+      <Loader2 className="w-12 h-12 text-[#00a2b1] animate-spin mb-4" />
+      <p className="text-slate-600 font-bold uppercase tracking-widest text-xs">Carregando...</p>
+    </div>
+  </motion.div>
+);
 
 export default function App() {
   console.log("App component starting to render...");
@@ -2280,6 +2399,21 @@ export default function App() {
 
     useEffect(() => {
       console.log("App useEffect running...");
+      
+      // Listen for auth state changes (specifically for password recovery)
+      if (isSupabaseConfigured && supabase) {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+          console.log("Auth event:", event);
+          if (event === 'PASSWORD_RECOVERY') {
+            setShowResetModal(true);
+          }
+        });
+        
+        return () => {
+          subscription.unsubscribe();
+        };
+      }
+
       if (!isSupabaseConfigured) {
         console.warn("Supabase is not configured. Using local storage.");
         setIsEnvMissing(true);
@@ -2342,6 +2476,19 @@ export default function App() {
     }, [view]);
 
     const [isSimulatingLoading, setIsSimulatingLoading] = useState(false);
+    
+    // Safety net to prevent getting stuck on loading screen
+    useEffect(() => {
+      if (isSimulatingLoading) {
+        const timer = setTimeout(() => {
+          console.warn("Loading safety net triggered. Clearing isSimulatingLoading.");
+          setIsSimulatingLoading(false);
+          setLoading(false);
+        }, 15000); // 15 seconds fallback
+        return () => clearTimeout(timer);
+      }
+    }, [isSimulatingLoading]);
+
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [editBirthState, setEditBirthState] = useState("");
@@ -2353,7 +2500,11 @@ export default function App() {
     const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
     const [isDashboardLoading, setIsDashboardLoading] = useState(false);
     const [showForgotModal, setShowForgotModal] = useState(false);
-    const [forgotStep, setForgotStep] = useState<'options' | 'input' | 'result'>('options');
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [newPassword, setNewPassword] = useState("");
+    const [forgotOtp, setForgotOtp] = useState("");
+    const [isResetLoading, setIsResetLoading] = useState(false);
+    const [forgotStep, setForgotStep] = useState<'options' | 'input' | 'otp' | 'result'>('options');
     const [forgotType, setForgotType] = useState<'password' | 'matricula'>('password');
     const [forgotEmail, setForgotEmail] = useState('');
     const [forgotResult, setForgotResult] = useState<any>(null);
@@ -2406,38 +2557,79 @@ export default function App() {
       if (!forgotEmail) return;
       setIsForgotLoading(true);
       
-      // Simulate API delay
-      await new Promise(r => setTimeout(r, 1500));
-      
-      const foundUser = await db.getUserByEmail(forgotEmail);
-      
-      if (forgotType === 'matricula') {
-        if (foundUser) {
-          setForgotResult({ success: true, matricula: foundUser.matricula });
+      try {
+        if (forgotType === 'password') {
+          if (forgotStep === 'input') {
+            // Step 1: Send the OTP code
+            const result = await db.forgotPassword(forgotEmail);
+            if (result.error) {
+              setForgotResult({ success: false, message: result.error });
+              setForgotStep('result');
+            } else {
+              setForgotStep('otp');
+            }
+          } else if (forgotStep === 'otp') {
+            // Step 2: Verify the OTP code
+            const result = await db.verifyRecoveryCode(forgotEmail, forgotOtp);
+            if (result.success) {
+              setShowForgotModal(false);
+              setShowResetModal(true);
+            } else {
+              setForgotResult({ success: false, message: "Código inválido ou expirado." });
+              setForgotStep('result');
+            }
+          }
         } else {
-          setForgotResult({ success: false, message: "E-mail não encontrado em nossa base de dados." });
+          // For matricula, we still just show it on screen
+          const foundUser = await db.getUserByEmail(forgotEmail);
+          if (foundUser) {
+            setForgotResult({ success: true, matricula: foundUser.matricula });
+          } else {
+            setForgotResult({ success: false, message: "E-mail não encontrado em nossa base de dados." });
+          }
+          setForgotStep('result');
         }
-      } else {
-        // Password reset simulation
-        if (foundUser) {
-          setForgotResult({ success: true, message: "Um link de recuperação foi enviado para seu e-mail." });
-        } else {
-          setForgotResult({ success: false, message: "E-mail não encontrado em nossa base de dados." });
-        }
+      } catch (err) {
+        console.error("Forgot action error:", err);
+        setForgotResult({ success: false, message: "Ocorreu um erro ao processar sua solicitação." });
+        setForgotStep('result');
+      } finally {
+        setIsForgotLoading(false);
       }
-      
-      setForgotStep('result');
-      setIsForgotLoading(false);
+    };
+
+    const handleResetPassword = async () => {
+      if (!newPassword) return;
+      setIsResetLoading(true);
+      try {
+        const result = await db.updatePassword(newPassword);
+        if (result.success) {
+          setShowResetModal(false);
+          setNewPassword("");
+          setShowToast({ show: true, message: "Senha atualizada com sucesso!", type: 'success' });
+          setTimeout(() => setShowToast({ show: false, message: "", type: 'success' }), 3000);
+          setView('login');
+        } else {
+          alert(result.error || "Erro ao atualizar senha.");
+        }
+      } catch (err) {
+        console.error("Reset password error:", err);
+        alert("Erro ao processar solicitação.");
+      } finally {
+        setIsResetLoading(false);
+      }
     };
 
     const resetForgotFlow = () => {
       setShowForgotModal(false);
       setForgotStep('options');
       setForgotEmail('');
+      setForgotOtp('');
       setForgotResult(null);
     };
 
     const fetchStudentData = async (id: number) => {
+      console.log(`Buscando dados para o aluno ID: ${id}`);
       let dashboardData = null;
       let attempt = 0;
       const maxRetries = 3;
@@ -2445,30 +2637,49 @@ export default function App() {
       while (attempt < maxRetries) {
         try {
           attempt++;
-          dashboardData = await db.getStudentDashboard(id);
-          break;
+          console.log(`Tentativa ${attempt} de buscar dashboard para ID ${id}`);
+          
+          // Adicionando timeout para a busca do dashboard
+          const dashboardPromise = db.getStudentDashboard(id);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout ao buscar dados do dashboard")), 12000)
+          );
+          
+          dashboardData = await Promise.race([dashboardPromise, timeoutPromise]) as DashboardData | null;
+          
+          if (dashboardData) break;
         } catch (error) {
           console.error(`Erro ao buscar dados (tentativa ${attempt}):`, error);
           if (attempt >= maxRetries) {
-            setError("Erro ao carregar dados do portal. Verifique sua conexão.");
+            console.error("Falha definitiva ao buscar dados do dashboard.");
             return;
           }
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
 
-      if (!dashboardData) return;
+      if (!dashboardData) {
+        console.warn("Nenhum dado retornado para o dashboard.");
+        return;
+      }
       
       // Auto-generate data if grades or payments are empty (indicates uninitialized student)
-      if (dashboardData.grades.length === 0 || dashboardData.payments.length === 0) {
-        setLoading(true);
+      const hasGrades = dashboardData.grades && dashboardData.grades.length > 0;
+      const hasPayments = dashboardData.payments && dashboardData.payments.length > 0;
+
+      if (!hasGrades || !hasPayments) {
+        console.log("Dados vazios detectados. Gerando dados fictícios...");
         try {
-          await db.generateStudentFictionalData(id);
+          // Adicionando timeout para geração de dados
+          const generatePromise = db.generateStudentFictionalData(id);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout ao gerar dados fictícios")), 15000)
+          );
+          
+          await Promise.race([generatePromise, timeoutPromise]);
           dashboardData = await db.getStudentDashboard(id);
         } catch (error) {
           console.error("Erro ao gerar dados automáticos:", error);
-        } finally {
-          setLoading(false);
         }
       }
 
@@ -2545,12 +2756,18 @@ export default function App() {
     const handleLogin = async (e: React.FormEvent) => {
       e.preventDefault();
       
+      // Concurrency guard
+      if (loading) return;
+
       // Close mobile keyboard
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
 
-      if (!matricula || !password) {
+      const cleanMatricula = matricula.trim();
+      console.log(`handleLogin: Tentando login para matrícula: "${cleanMatricula}"`);
+
+      if (!cleanMatricula || !password) {
         setError("Por favor, preencha todos os campos.");
         return;
       }
@@ -2577,10 +2794,10 @@ export default function App() {
               setError(`Conexão instável, tentando novamente (${attempt}/${maxRetries})...`);
             }
             
-            console.log(`Tentativa de login ${attempt}/${maxRetries} para matrícula: ${matricula}`);
+            console.log(`Tentativa de login ${attempt}/${maxRetries} para matrícula: ${cleanMatricula}`);
             
             // Adicionando timeout para evitar que fique preso carregando infinitamente
-            const loginPromise = db.login(matricula, password);
+            const loginPromise = db.login(cleanMatricula, password);
             const timeoutPromise = new Promise((_, reject) => 
               setTimeout(() => reject(new Error("A operação de login expirou. Verifique sua conexão.")), 10000)
             );
@@ -2698,32 +2915,47 @@ export default function App() {
             setEditPhotoUrl(userData.photo_url || "");
             setIsSimulatingLoading(true);
             
+            // Atraso levemente maior para garantir cobertura total do overlay
             setTimeout(() => {
-              try {
-                setUser(userData);
-                if (userData.regularity && userData.regularity !== 'Regular') {
-                  setView("financial");
-                  setError("Sua conta possui pendências. Por favor, regularize sua situação financeira para acessar o portal completo.");
-                } else {
-                  setView("dashboard");
-                }
-                fetchStudentData(userData.id);
-              } catch (err) {
-                console.error("Erro ao processar dados do aluno:", err);
-              } finally {
-                setIsSimulatingLoading(false);
-                setLoading(false);
+              // Set user and view
+              setUser(userData);
+              if (userData.regularity && userData.regularity !== 'Regular') {
+                setView("financial");
+                setError("Sua conta possui pendências. Por favor, regularize sua situação financeira para acessar o portal completo.");
+              } else {
+                setView("dashboard");
               }
-            }, 3000);
+
+              // Start fetching data in the background
+              const loadData = async () => {
+                try {
+                  console.log("Iniciando busca de dados do aluno...");
+                  await fetchStudentData(userData.id);
+                  console.log("Dados do aluno carregados com sucesso.");
+                } catch (err) {
+                  console.error("Erro ao processar dados do aluno:", err);
+                } finally {
+                  // Sincronizado com a animação da barra (3s) + um pequeno fôlego (200ms)
+                  setTimeout(() => {
+                    setIsSimulatingLoading(false);
+                    setLoading(false);
+                    console.log("Processo de login finalizado.");
+                  }, 3200);
+                }
+              };
+              
+              loadData();
+            }, 150);
           }
         } else {
-          console.warn("Login falhou: Credenciais incorretas.");
+          console.warn("Login falhou: Credenciais incorretas ou usuário não encontrado.");
           setError("Matrícula ou senha incorretos.");
           setLoading(false);
         }
       } catch (err: any) {
         console.error("Erro fatal no handleLogin:", err);
-        setError("Ocorreu um erro inesperado. Tente novamente.");
+        setError("Ocorreu um erro inesperado. Verifique sua conexão e tente novamente.");
+        setIsSimulatingLoading(false);
         setLoading(false);
       }
     };
@@ -2866,19 +3098,33 @@ export default function App() {
 
       console.log("handleSignUp started", signUpData);
 
+      if (signUpData.password.length < 6) {
+        setShowToast({ 
+          show: true, 
+          message: "A senha deve ter pelo menos 6 dígitos.", 
+          type: 'error' 
+        });
+        return;
+      }
+
       if (signUpData.password !== signUpData.confirmPassword) {
-        alert("As senhas não coincidem.");
+        setShowToast({ 
+          show: true, 
+          message: "As senhas não coincidem. Verifique e tente novamente.", 
+          type: 'error' 
+        });
         return;
       }
 
       setIsSignUpLoading(true);
       try {
+        console.log("handleSignUp: Iniciando processo de inscrição...");
         // Generate matrícula: 4 digits year + 4 random digits
         const year = new Date().getFullYear().toString();
         const random = Math.floor(1000 + Math.random() * 9000).toString();
         const generatedMatricula = year + random;
 
-        console.log("Calling db.signUp with matricula:", generatedMatricula);
+        console.log("handleSignUp: Chamando db.signUp com matrícula:", generatedMatricula, "e senha (len):", signUpData.password?.length);
         
         // Add a timeout to the signUp call
         const signUpPromise = db.signUp({
@@ -2895,18 +3141,27 @@ export default function App() {
         });
 
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("A operação de inscrição expirou. Verifique sua conexão ou tente novamente.")), 15000)
+          setTimeout(() => reject(new Error("A operação de inscrição expirou. Verifique sua conexão ou tente novamente.")), 20000)
         );
 
         await Promise.race([signUpPromise, timeoutPromise]);
-        console.log("db.signUp completed successfully");
+        console.log("handleSignUp: db.signUp concluído com sucesso");
         
         setSignUpSuccessMatricula(generatedMatricula);
+        setShowToast({ 
+          show: true, 
+          message: "Inscrição realizada com sucesso!", 
+          type: 'success' 
+        });
       } catch (err: any) {
-        console.error("Error in handleSignUp:", err);
-        alert(err.message || "Erro ao realizar inscrição");
+        console.error("Erro em handleSignUp:", err);
+        setShowToast({ 
+          show: true, 
+          message: err.message || "Erro ao realizar inscrição. Tente novamente.", 
+          type: 'error' 
+        });
       } finally {
-        console.log("handleSignUp finished (finally)");
+        console.log("handleSignUp: Processo finalizado.");
         setIsSignUpLoading(false);
       }
     };
@@ -3161,7 +3416,7 @@ export default function App() {
               {/* Table Rows */}
               <div className="divide-y divide-slate-100">
                 {data.grades.map((grade, index) => (
-                  <div key={`grade-row-img-${grade.id || index}`} className="grid grid-cols-12 gap-4 p-6 items-center hover:bg-slate-50 transition-colors">
+                  <div key={`grade-row-${grade.id || index}-${index}`} className="grid grid-cols-12 gap-4 p-6 items-center hover:bg-slate-50 transition-colors">
                     <div className="col-span-8">
                       <p className="text-sm font-bold text-slate-700 uppercase tracking-tight">
                         {grade.discipline_name}
@@ -4595,57 +4850,22 @@ export default function App() {
     </div>
   );
 
-  const LoadingOverlay = () => {
-    return (
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-[#00a2b1] z-[100] flex flex-col items-center justify-center p-6 text-center"
-      >
-        <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-4 shadow-2xl mb-8">
-          <img src={appSettings?.logo_url || "https://cdn-icons-png.flaticon.com/512/3135/3135810.png"} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-        </div>
-        
-        <div className="relative">
-          <Loader2 className="w-10 h-10 text-white animate-spin" />
-        </div>
-        
-        <h3 className="mt-6 text-2xl font-black text-white uppercase tracking-tight">{getCollegeName(appSettings)}</h3>
-        <p className="mt-2 text-white/80 text-sm font-bold uppercase tracking-widest">Carregando seu portal...</p>
-        
-        <div className="mt-10 w-40 h-2 bg-white/20 rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: "100%" }}
-            transition={{ duration: 3, ease: "easeInOut" }}
-            className="h-full bg-orange-500"
-          />
-        </div>
-      </motion.div>
-    );
-  };
-
-  const DashboardLoadingOverlay = () => (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm"
-    >
-      <div className="bg-white p-8 rounded-3xl shadow-2xl border border-slate-100 flex flex-col items-center">
-        <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-        <p className="text-slate-600 font-bold uppercase tracking-widest text-xs">Carregando...</p>
-      </div>
-    </motion.div>
-  );
-
   return (
     <div className="max-w-md mx-auto md:max-w-none bg-slate-50 min-h-screen overflow-x-hidden">
-      <AnimatePresence>
-        {isSimulatingLoading && <LoadingOverlay />}
+      <AnimatePresence mode="wait">
+        {isSimulatingLoading && (
+          <LoadingOverlay 
+            appSettings={appSettings} 
+            onForceEnter={() => {
+              setIsSimulatingLoading(false);
+              setLoading(false);
+            }} 
+          />
+        )}
         {isDashboardLoading && <DashboardLoadingOverlay />}
-        
+      </AnimatePresence>
+      
+      <AnimatePresence>
         {showProofUrl && (
           <motion.div 
             initial={{ opacity: 0 }}
@@ -4746,10 +4966,55 @@ export default function App() {
           setType={setForgotType}
           email={forgotEmail}
           setEmail={setForgotEmail}
+          otp={forgotOtp}
+          setOtp={setForgotOtp}
           result={forgotResult}
           isLoading={isForgotLoading}
           onAction={handleForgotAction}
         />
+        
+        {/* Reset Password Modal */}
+        <AnimatePresence>
+          {showResetModal && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+            >
+              <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl"
+              >
+                <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Nova Senha</h3>
+                </div>
+                <div className="p-8 space-y-6">
+                  <p className="text-sm text-slate-500 font-medium">Digite sua nova senha abaixo para recuperar o acesso.</p>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input 
+                      type="password" 
+                      className="input-field pl-12 h-14 rounded-2xl"
+                      placeholder="Nova senha"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                  </div>
+                  <button 
+                    onClick={handleResetPassword}
+                    disabled={!newPassword || isResetLoading}
+                    className="w-full h-14 bg-[#00a2b1] text-white font-bold rounded-2xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    {isResetLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "ATUALIZAR SENHA"}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <SignUpModal 
           key="signup-modal"
           isOpen={showSignUpModal}

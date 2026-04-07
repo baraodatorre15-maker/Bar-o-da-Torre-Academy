@@ -755,10 +755,18 @@ export const resetDB = () => {
 export const db = {
   login: async (matricula: string, pass: string) => {
     const database = getDB();
-    const user = database.users.find((u: any) => 
-      u.matricula.toLowerCase() === matricula.toLowerCase() && 
-      u.password === pass
-    );
+    const cleanMatricula = matricula.trim().toLowerCase();
+    
+    console.log(`localDB.login: Buscando usuário com matrícula: "${cleanMatricula}" (length: ${cleanMatricula.length})`);
+    
+    const user = database.users.find((u: any) => {
+      const uMatricula = (u.matricula || "").toString().trim().toLowerCase();
+      const match = uMatricula === cleanMatricula && u.password === pass;
+      if (uMatricula === cleanMatricula && !match) {
+        console.warn(`localDB.login: Matrícula coincide, mas senha não. Esperada: "${u.password}" (len: ${u.password?.length}), Recebida: "${pass}" (len: ${pass?.length})`);
+      }
+      return match;
+    });
     
     if (user) {
       if (user.role === 'student' && user.status === 'blocked') {
@@ -1124,6 +1132,23 @@ export const db = {
     const student = database.users.find((u: any) => u.role === 'student' && u.email?.toLowerCase() === email.toLowerCase());
     return student || null;
   },
+  forgotPassword: async (email: string): Promise<{ message?: string; error?: string }> => {
+    // In mock mode, we just check if user exists and simulate success
+    const database = getDB();
+    const student = database.users.find((u: any) => u.role === 'student' && u.email?.toLowerCase() === email.toLowerCase());
+    if (student) {
+      return { message: "Simulação: E-mail enviado com sucesso (Mock Mode)." };
+    }
+    return { error: "Usuário não encontrado." };
+  },
+  verifyRecoveryCode: async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
+    // In mock mode, we just simulate success
+    return { success: true };
+  },
+  updatePassword: async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    // In mock mode, we just simulate success
+    return { success: true };
+  },
   getPayments: async () => {
     const database = getDB();
     return database.payments || [];
@@ -1147,6 +1172,18 @@ export const db = {
     if (database.users.some((u: any) => u.matricula === signUpData.matricula)) {
       console.warn("Matricula already exists:", signUpData.matricula);
       throw new Error("Esta matrícula já está cadastrada.");
+    }
+
+    // Check if email already exists
+    if (database.users.some((u: any) => u.email.toLowerCase() === signUpData.email.toLowerCase())) {
+      console.warn("Email already exists:", signUpData.email);
+      throw new Error("Este e-mail já está cadastrado.");
+    }
+
+    // Check if CPF already exists
+    if (signUpData.cpf && database.users.some((u: any) => u.cpf === signUpData.cpf)) {
+      console.warn("CPF already exists:", signUpData.cpf);
+      throw new Error("Este CPF já está cadastrado.");
     }
 
     const newId = database.users.length > 0 ? Math.max(...database.users.map((u: any) => u.id)) + 1 : 1;

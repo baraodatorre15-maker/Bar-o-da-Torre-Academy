@@ -26,36 +26,107 @@ export const dbService = {
       return null;
     }
     console.log(`Attempting login for matricula: ${matricula}`);
-    // Case-insensitive search for matricula
-    const { data, error } = await supabase
+    
+    const cleanMatricula = matricula.trim();
+    // 1. Find user by matricula to get their email
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
-      .ilike('matricula', matricula)
-      .eq('password', pass)
+      .ilike('matricula', cleanMatricula)
       .single();
 
-    console.log('Supabase response:', { data, error });
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        console.warn(`Login failed: No user found with matricula ${matricula} and the provided password.`);
-        throw new Error("AUTH_ERROR: Matrícula ou senha incorretos.");
-      }
-      if (error.message?.includes('relation "users" does not exist')) {
-        console.error('Supabase table "users" is missing. Please run the SQL migration.');
-        throw new Error("AUTH_ERROR: Erro de configuração: Tabela 'users' não encontrada no Supabase.");
-      }
-      console.error('Login error from Supabase:', error.message, error.details, error.hint, error.code);
-      throw new Error(error.message || "Erro de conexão com o banco de dados.");
+    if (userError || !userData) {
+      console.warn(`Login failed: No user found with matricula ${cleanMatricula}.`);
+      throw new Error("AUTH_ERROR: Matrícula ou senha incorretos.");
     }
-    
-    if (!data) {
-      console.warn('Login failed: No user found with these credentials.');
+
+    // 2. Sign in with Supabase Auth using the email found
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: userData.email,
+      password: pass,
+    });
+
+    if (authError) {
+      console.error('Supabase Auth login error:', authError.message);
+      
+      if (authError.message.toLowerCase().includes("email not confirmed")) {
+        throw new Error("AUTH_ERROR: Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.");
+      }
+      
       throw new Error("AUTH_ERROR: Matrícula ou senha incorretos.");
     }
     
-    console.log('Login successful for:', data.name);
-    return data as User;
+    console.log('Login successful for:', userData.name);
+    return userData as User;
+  },
+
+  forgotPassword: async (email: string): Promise<{ message?: string; error?: string }> => {
+    if (!supabase) {
+      return { error: "Supabase não configurado." };
+    }
+
+    try {
+      // Use Supabase Auth's native reset password functionality
+      // This sends the email (make sure to configure the template in Supabase to show the code)
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+      if (error) {
+        console.error('Supabase Auth reset password error:', error.message);
+        return { error: error.message };
+      }
+
+      return { message: "Um código de 6 dígitos foi enviado para seu e-mail." };
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return { error: 'Erro ao processar solicitação de recuperação.' };
+    }
+  },
+
+  verifyRecoveryCode: async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) return { success: false, error: "Supabase não configurado." };
+    
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: 'recovery'
+      });
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error verifying OTP:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  updatePassword: async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) return { success: false, error: "Supabase não configurado." };
+    
+    try {
+      // 1. Update password in Supabase Auth
+      const { error: authError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (authError) throw authError;
+
+      // 2. Update password in public.users table for consistency (optional but good for this app's current structure)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.email) {
+        const { error: dbError } = await supabase
+          .from('users')
+          .update({ password: newPassword })
+          .eq('email', user.email);
+        
+        if (dbError) console.warn("Could not update password in public.users table:", dbError.message);
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error updating password:", error);
+      return { success: false, error: error.message };
+    }
   },
 
   // Online Classes
@@ -710,15 +781,41 @@ export const dbService = {
   signUp: async (signUpData: any): Promise<User> => {
     console.log("remoteDB.signUp started", signUpData);
     // Check if matricula already exists
-    const { data: existingUser } = await supabase
+    const { data: existingUserMatricula } = await supabase
       .from('users')
       .select('id')
       .eq('matricula', signUpData.matricula)
       .maybeSingle();
 
-    if (existingUser) {
+    if (existingUserMatricula) {
       console.warn("Matricula already exists in remote DB:", signUpData.matricula);
       throw new Error('Esta matrícula já está cadastrada.');
+    }
+
+    // Check if email already exists
+    const { data: existingUserEmail } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', signUpData.email)
+      .maybeSingle();
+
+    if (existingUserEmail) {
+      console.warn("Email already exists in remote DB:", signUpData.email);
+      throw new Error('Este e-mail já está cadastrado.');
+    }
+
+    // Check if CPF already exists
+    if (signUpData.cpf) {
+      const { data: existingUserCPF } = await supabase
+        .from('users')
+        .select('id')
+        .eq('cpf', signUpData.cpf)
+        .maybeSingle();
+
+      if (existingUserCPF) {
+        console.warn("CPF already exists in remote DB:", signUpData.cpf);
+        throw new Error('Este CPF já está cadastrado.');
+      }
     }
 
     // Insert new user with blocked status
@@ -734,6 +831,25 @@ export const dbService = {
     };
 
     console.log("Inserting new user into remote DB...", newUser);
+    
+    // 1. Create user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: signUpData.email,
+      password: signUpData.password,
+      options: {
+        data: {
+          name: signUpData.name,
+          matricula: signUpData.matricula,
+        }
+      }
+    });
+
+    if (authError) {
+      console.error('Supabase Auth sign up error:', authError.message);
+      throw new Error(`Erro na autenticação: ${authError.message}`);
+    }
+
+    // 2. Insert into public.users table
     const { data, error } = await supabase
       .from('users')
       .insert([newUser])
